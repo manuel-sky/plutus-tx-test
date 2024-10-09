@@ -28,11 +28,11 @@ import System.Environment (getArgs)
 auctionParams :: AuctionParams
 auctionParams =
   AuctionParams
-    { apSeller = error "Replace with seller public key hash"
-    , apCurrencySymbol = error "Replace with currency symbol"
+    { apSeller = "02deaad4104ff4846f22cbdf0321f98d485bf2b407b0fe745f9aa4d3"
+    , apCurrencySymbol = "ddaa39f42d9c068792e5d0ea29c7013acd514c901834ba4332b4c206"
     , apTokenName = "TokenToBeAuctioned"
     , apMinBid = 100
-    , apEndTime = error "Replace with the auction's end time"
+    , apEndTime = 1728079200000
     }
 
 myContractBlueprint :: ContractBlueprint
