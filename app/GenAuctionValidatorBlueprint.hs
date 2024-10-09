@@ -43,16 +43,6 @@ clientParams =
     , challenge = Challenge (stringToBuiltinByteString "hello world")
     }
 
-auctionParams :: AuctionParams
-auctionParams =
-  AuctionParams
-    { apSeller = "02deaad4104ff4846f22cbdf0321f98d485bf2b407b0fe745f9aa4d3"
-    , apCurrencySymbol = "ddaa39f42d9c068792e5d0ea29c7013acd514c901834ba4332b4c206"
-    , apTokenName = "TokenToBeAuctioned"
-    , apMinBid = 100
-    , apEndTime = 1728079200000
-    }
-
 clientContractBlueprint :: ContractBlueprint
 clientContractBlueprint =
   MkContractBlueprint
@@ -60,16 +50,6 @@ clientContractBlueprint =
     , contractPreamble = clientPreamble
     , contractValidators = Set.singleton myClientValidator
     , contractDefinitions = deriveDefinitions @[ClientParams, ClientDatum, ClientRedeemer]
-    }
-
-myPreamble :: Preamble
-myPreamble =
-  MkPreamble
-    { preambleTitle = "Auction Validator"
-    , preambleDescription = Just "Blueprint for a Plutus script validating auction transactions"
-    , preambleVersion = "1.0.0"
-    , preamblePlutusVersion = PlutusV2
-    , preambleLicense = Just "MIT"
     }
 
 clientPreamble :: Preamble
