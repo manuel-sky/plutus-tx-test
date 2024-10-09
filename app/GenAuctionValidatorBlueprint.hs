@@ -80,7 +80,7 @@ myClientValidator =
           { argumentTitle = Just "Redeemer"
           , argumentDescription = Just "Redeemer for the auction validator"
           , argumentPurpose = Set.fromList [Spend]
-          , argumentSchema = definitionRef @ClientRedeemer
+          , argumentSchema = definitionRef @()
           }
     , validatorDatum = Nothing
     , validatorCompiled = do
