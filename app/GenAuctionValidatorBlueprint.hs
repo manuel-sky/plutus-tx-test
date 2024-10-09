@@ -102,7 +102,7 @@ myClientValidator =
           , argumentPurpose = Set.fromList [Spend]
           , argumentSchema = definitionRef @ClientRedeemer
           }
-    , validatorDatum = ClientDatum
+    , validatorDatum = Nothing
     , validatorCompiled = do
         let script = clientValidatorScript clientParams
         let code = Short.fromShort (serialiseCompiledCode script) 
