@@ -23,7 +23,7 @@
         "description": "Redeemer for the auction validator",
         "purpose": "spend",
         "schema": {
-          "$ref": "#/definitions/Unit"
+          "$ref": "#/definitions/ClientRedeemer"
         }
       },
       "parameters": [
