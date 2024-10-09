@@ -95,11 +95,8 @@ PlutusTx.makeLift ''MultiSigPubKey
 PlutusTx.makeLift ''Challenge
 
 -- Main parameters / initialization for client contract
-data ClientParams
-    = ClientParams
-        { operators :: MultiSigPubKey -- Public keys of data operators that must sign off the bounty
-        , challenge :: Challenge      -- The hash that must be signed to claim the bounty
-        }
+data ClientParams = ClientParams { operators :: MultiSigPubKey, challenge :: Challenge }
+  deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''ClientParams
 PlutusTx.makeIsDataSchemaIndexed ''ClientParams [('ClientParams, 0)]
@@ -156,12 +153,14 @@ data ClientRedeemer
     = ClaimBounty
         { multiSig :: MultiSig    -- List of signatures of the challenge provided by data publishers
         }
+    deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeIsDataSchemaIndexed ''ClientRedeemer [('ClaimBounty, 0)]
 
 -- The datum is the state of the smart contract
 -- Just empty state for now, might later distinguish between running and claimed bounty
 data ClientDatum = ClientDatum
+  deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeIsDataSchemaIndexed ''ClientDatum [('ClientDatum, 0)]
 
