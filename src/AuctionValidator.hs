@@ -44,6 +44,7 @@ import PlutusTx.Show qualified as PlutusTx
 import PlutusTx.Builtins (equalsByteString, lessThanInteger, verifyEd25519Signature)
 
 data PubKey = PubKey PlutusTx.BuiltinByteString
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 instance Eq PubKey where
     (PubKey pk1) == (PubKey pk2) = equalsByteString pk1 pk2
@@ -51,26 +52,31 @@ instance PlutusTx.Eq PubKey where
     (PubKey pk1) == (PubKey pk2) = equalsByteString pk1 pk2
 
 data Sig = Sig PlutusTx.BuiltinByteString
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 -- List of data operators that must sign and minimum number of them that must sign
 data MultiSigPubKey = MultiSigPubKey [PubKey] Integer
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 -- Hash that must be signed by each data operator
 data Challenge = Challenge PlutusTx.BuiltinByteString
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 -- A single signature by a single data operator public key
 data SingleSig = SingleSig { key :: PubKey, sig :: Sig }
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 -- Signatures produced by data operators for challenge
 data MultiSig = MultiSig [SingleSig]
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 
-PlutusTx.unstableMakeIsData ''PubKey
-PlutusTx.unstableMakeIsData ''Sig
-PlutusTx.unstableMakeIsData ''MultiSigPubKey
-PlutusTx.unstableMakeIsData ''Challenge
-PlutusTx.unstableMakeIsData ''SingleSig
-PlutusTx.unstableMakeIsData ''MultiSig
+PlutusTx.makeIsDataSchemaIndexed ''PubKey [('PubKey, 0)]
+PlutusTx.makeIsDataSchemaIndexed ''Sig [('Sig, 0)]
+PlutusTx.makeIsDataSchemaIndexed ''MultiSigPubKey [('MultiSigPubKey, 0)]
+PlutusTx.makeIsDataSchemaIndexed ''Challenge [('Challenge, 0)]
+PlutusTx.makeIsDataSchemaIndexed ''SingleSig [('SingleSig, 0)]
+PlutusTx.makeIsDataSchemaIndexed ''MultiSig [('MultiSig, 0)]
 PlutusTx.makeLift ''PubKey
 PlutusTx.makeLift ''Sig
 PlutusTx.makeLift ''SingleSig
@@ -80,6 +86,7 @@ PlutusTx.makeLift ''Challenge
 
 -- Main parameters / initialization for client contract
 data ClientParams = ClientParams { operators :: MultiSigPubKey, challenge :: Challenge }
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''ClientParams
@@ -90,6 +97,7 @@ data ClientRedeemer
     = ClaimBounty
         { multiSig :: MultiSig    -- List of signatures of the challenge provided by data publishers
         }
+    deriving stock (Generic)
     deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''ClientRedeemer
@@ -98,6 +106,7 @@ PlutusTx.makeIsDataSchemaIndexed ''ClientRedeemer [('ClaimBounty, 0)]
 -- The datum is the state of the smart contract
 -- Just empty state for now, might later distinguish between running and claimed bounty
 data ClientDatum = ClientDatum
+  deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''ClientDatum
