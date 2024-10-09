@@ -159,11 +159,6 @@ pubKeyExists :: PubKey -> [PubKey] -> Bool
 pubKeyExists pk [] = False
 pubKeyExists pk (x:xs) = pk == x || pubKeyExists pk xs
 
--- Helper function to ensure all PubKeys in a list are unique
-allUniquePubKeys :: [PubKey] -> Bool
-allUniquePubKeys [] = True
-allUniquePubKeys (pk:pks) = not (pubKeyExists pk pks) && allUniquePubKeys pks
-
 -- BLOCK2
 -- AuctionValidator.hs
 {-# INLINEABLE clientUntypedValidator #-}
