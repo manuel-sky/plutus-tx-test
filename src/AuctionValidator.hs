@@ -43,6 +43,15 @@ import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx.Show qualified as PlutusTx
 import PlutusTx.Builtins (equalsByteString, lessThanInteger, verifyEd25519Signature)
 
+-- Hash that must be signed by each data operator
+data TopHash = TopHash PlutusTx.BuiltinByteString
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
+-- Hash of the storage trie
+data DataHash = DataHash PlutusTx.BuiltinByteString
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
+-- A public key
 data PubKey = PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
@@ -50,42 +59,58 @@ instance Eq PubKey where
     (PubKey pk1) == (PubKey pk2) = equalsByteString pk1 pk2
 instance PlutusTx.Eq PubKey where
     (PubKey pk1) == (PubKey pk2) = equalsByteString pk1 pk2
-
-data Sig = Sig PlutusTx.BuiltinByteString
-  deriving stock (Generic)
-  deriving anyclass (HasBlueprintDefinition)
 -- List of data operators that must sign and minimum number of them that must sign
 data MultiSigPubKey = MultiSigPubKey [PubKey] Integer
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
--- Hash that must be signed by each data operator
-data Challenge = Challenge PlutusTx.BuiltinByteString
-  deriving stock (Generic)
-  deriving anyclass (HasBlueprintDefinition)
 -- A single signature by a single data operator public key
-data SingleSig = SingleSig { key :: PubKey, sig :: Sig }
+data SingleSig = SingleSig PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
--- Signatures produced by data operators for challenge
+-- Signatures produced by data operators for top hash, must be in same order as multi-sig pubkeys
 data MultiSig = MultiSig [SingleSig]
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 
+PlutusTx.makeIsDataSchemaIndexed ''TopHash [('TopHash, 0)]
+PlutusTx.makeIsDataSchemaIndexed ''DataHash [('DataHash, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''PubKey [('PubKey, 0)]
-PlutusTx.makeIsDataSchemaIndexed ''Sig [('Sig, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''MultiSigPubKey [('MultiSigPubKey, 0)]
-PlutusTx.makeIsDataSchemaIndexed ''Challenge [('Challenge, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''SingleSig [('SingleSig, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''MultiSig [('MultiSig, 0)]
+PlutusTx.makeLift ''TopHash
+PlutusTx.makeLift ''DataHash
 PlutusTx.makeLift ''PubKey
-PlutusTx.makeLift ''Sig
+PlutusTx.makeLift ''MultiSigPubKey
 PlutusTx.makeLift ''SingleSig
 PlutusTx.makeLift ''MultiSig
-PlutusTx.makeLift ''MultiSigPubKey
-PlutusTx.makeLift ''Challenge
+
+-- Data stored in the bridge NFT UTXO's datum
+data BridgeNFTDatum = BridgeNFTDatum { top_hash :: TopHash }
+
+PlutusTx.makeLift ''BridgeNFTDatum
+PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
+
+-- Initialization parameters for the bridge contract:
+-- The policy ID is the unique identifier of the NFT currency symbol (= hash of minting script)
+data BridgeParams = BridgeParams { bridge_nft_policy_id :: CurrencySymbol }
+
+PlutusTx.makeLift ''BridgeParams
+PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
+
+data SimplifiedMerkleProof =
+  SimplifiedMerkleProof { left :: DataHash, right :: DataHash }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
+
+PlutusTx.makeLift ''SimplifiedMerkleProof
+PlutusTx.makeIsDataSchemaIndexed ''SimplifiedMerkleProof [('SimplifiedMerkleProof, 0)]
 
 -- Main parameters / initialization for client contract
-data ClientParams = ClientParams { operators :: MultiSigPubKey, challenge :: Challenge }
+data ClientParams = ClientParams
+  { bounty_nft_policy_id :: CurrencySymbol -- Unique currency symbol (hash of minting policy) of the bridge contract NFT
+  , target_hash :: DataHash -- Hash of data that must be present in storage trie
+  }
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 
@@ -95,8 +120,7 @@ PlutusTx.makeIsDataSchemaIndexed ''ClientParams [('ClientParams, 0)]
 -- Requests to contract, can claim bounty
 data ClientRedeemer
     = ClaimBounty
-        { multiSig :: MultiSig    -- List of signatures of the challenge provided by data publishers
-        }
+        { proof :: SimplifiedMerkleProof }
     deriving stock (Generic)
     deriving anyclass (HasBlueprintDefinition)
 
@@ -105,6 +129,7 @@ PlutusTx.makeIsDataSchemaIndexed ''ClientRedeemer [('ClaimBounty, 0)]
 
 -- The datum is the state of the smart contract
 -- Just empty state for now, might later distinguish between running and claimed bounty
+-- XXX remove, no datum needed
 data ClientDatum = ClientDatum
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
@@ -126,38 +151,18 @@ clientTypedValidator params clientDatum redeemer ctx@(ScriptContext txInfo _) =
         ClaimBounty multiSig ->
             [
               -- The signatures match the challenge
-              multiSigValid (operators params) (challenge params) multiSig
+              -- multiSigValid (operators params) (target_hash params) multiSig
             ]
 
 -- Function that checks if a SingleSig is valid for a given Challenge
-singleSigValid :: Challenge -> SingleSig -> Bool
-singleSigValid (Challenge challengeBytes) (SingleSig (PubKey pubKey) (Sig sig)) =
-  verifyEd25519Signature pubKey challengeBytes sig
+singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
+singleSigValid (PubKey pubKey) (DataHash challenge) (SingleSig sig) =
+  verifyEd25519Signature pubKey challenge sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
-multiSigValid :: MultiSigPubKey -> Challenge -> MultiSig -> Bool
-multiSigValid multiSigPubKey challenge multiSig =
-    atLeastNUniqueValidSigs multiSigPubKey challenge multiSig
-
--- Function that ensures at least N unique valid signatures from allowed pubkeys
-atLeastNUniqueValidSigs :: MultiSigPubKey -> Challenge -> MultiSig -> Bool
-atLeastNUniqueValidSigs (MultiSigPubKey allowedPubKeys n) challenge (MultiSig sigs) =
-    let validSigs = PlutusTx.filter (\(SingleSig pubKey sig) -> (PlutusTx.elem pubKey allowedPubKeys) && singleSigValid challenge (SingleSig pubKey sig)) sigs
-        uniquePubKeys = collectUniquePubKeys validSigs []
-    in lessThanInteger (PlutusTx.length uniquePubKeys) n
-
--- Helper function to collect unique PubKeys from valid signatures
-collectUniquePubKeys :: [SingleSig] -> [PubKey] -> [PubKey]
-collectUniquePubKeys [] acc = acc
-collectUniquePubKeys (SingleSig pubKey _:sigs) acc =
-    if pubKeyExists pubKey acc
-    then collectUniquePubKeys sigs acc
-    else collectUniquePubKeys sigs (pubKey:acc)
-
--- Helper function to check if a PubKey is already in a list
-pubKeyExists :: PubKey -> [PubKey] -> Bool
-pubKeyExists pk [] = False
-pubKeyExists pk (x:xs) = pk == x || pubKeyExists pk xs
+multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
+multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
+    singleSigValid pubKey challenge singleSig
 
 -- BLOCK2
 -- AuctionValidator.hs
