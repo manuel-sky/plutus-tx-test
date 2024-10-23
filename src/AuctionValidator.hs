@@ -98,6 +98,13 @@ data BridgeParams = BridgeParams { bridge_nft_policy_id :: CurrencySymbol }
 PlutusTx.makeLift ''BridgeParams
 PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
 
+data BridgeRedeemer = UpdateBridge
+  { committee :: MultiSigPubKey
+  , old_data_hash :: DataHash
+  , new_top_hash :: TopHash
+  , sig :: MultiSig -- signature over new_top_hash
+  }
+
 data SimplifiedMerkleProof =
   SimplifiedMerkleProof { left :: DataHash, right :: DataHash }
   deriving stock (Generic)
