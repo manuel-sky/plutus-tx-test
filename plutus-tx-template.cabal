@@ -14,7 +14,7 @@ library scripts
   hs-source-dirs: src
   exposed-modules:
     AuctionMintingPolicy
-    AuctionValidator
+    SkyContracts
 
   build-depends:
     , base
@@ -39,7 +39,7 @@ executable gen-auction-validator-blueprint
     , plutus-tx-plugin ^>=1.34.1.0
     , scripts
     , hex-text ^>=0.1.0.9
-  
+
 executable gen-minting-policy-blueprint
   import:           options
   hs-source-dirs:   app

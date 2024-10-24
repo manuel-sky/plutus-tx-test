@@ -18,7 +18,7 @@
 
 module Main where
 
-import AuctionValidator
+import SkyContracts
 import Data.ByteString.Short qualified as Short
 import Data.Set qualified as Set
 import PlutusLedgerApi.Common (serialiseCompiledCode)
@@ -92,7 +92,7 @@ myClientValidator =
     , validatorDatum = Nothing
     , validatorCompiled = do
         let script = clientValidatorScript clientParams
-        let code = Short.fromShort (serialiseCompiledCode script) 
+        let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
