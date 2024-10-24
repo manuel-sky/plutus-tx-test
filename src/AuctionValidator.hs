@@ -123,8 +123,17 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     conditions = case redeemer of
         UpdateBridge committee oldDataHash newTopHash sig ->
             [
-              multiSigValid committee newTopHash sig
+              multiSigValid committee newTopHash sig,
+              outputHasToken
             ]
+
+    ownOutput :: TxOut
+    ownOutput = case getContinuingOutputs ctx of
+        [o] -> o
+        _   -> PlutusTx.traceError "expected exactly one output"
+
+    outputHasToken :: Bool
+    outputHasToken = assetClassValueOf (txOutValue ownOutput) (AssetClass ((bridge_nft_policy_id params), TokenName "")) PlutusTx.== 1
 
 -- Function that checks if a SingleSig is valid
 singleSigValid :: PubKey -> TopHash -> SingleSig -> Bool
