@@ -92,6 +92,10 @@ PlutusTx.makeLift ''MultiSig
 
 -- Data stored in the bridge NFT UTXO's datum
 data BridgeNFTDatum = BridgeNFTDatum { top_hash :: TopHash, data_hash :: DataHash }
+instance Eq BridgeNFTDatum where
+    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) = equalsByteString th1 th2 && equalsByteString dh1 dh2
+instance PlutusTx.Eq BridgeNFTDatum where
+    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) = equalsByteString th1 th2 && equalsByteString dh1 dh2
 
 PlutusTx.makeLift ''BridgeNFTDatum
 PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
@@ -107,8 +111,49 @@ data BridgeRedeemer = UpdateBridge
   { bridge_committee :: MultiSigPubKey
   , bridge_old_data_hash :: DataHash
   , bridge_new_top_hash :: TopHash
+  , bridge_new_data_hash :: DataHash
   , bridge_sig :: MultiSig -- signature over new_top_hash
   }
+
+-- Function to find an input with a specific CurrencySymbol
+findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
+findInputByCurrencySymbol targetSymbol ctx =
+    let inputs = txInfoInputs $ scriptContextTxInfo ctx
+        findSymbol :: TxInInfo -> Bool
+        findSymbol txInInfo =
+          assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) (AssetClass (targetSymbol, TokenName "")) PlutusTx.== 1
+    in PlutusTx.find (findSymbol) inputs
+
+-- Function to get a Datum from a TxOut, handling both inline data and hashed data
+getDatumFromTxOut :: TxOut -> ScriptContext -> Maybe Datum
+getDatumFromTxOut txOut ctx = case txOutDatum txOut of
+    OutputDatumHash dh -> findDatum dh (scriptContextTxInfo ctx)  -- Lookup the datum using the hash
+    OutputDatum datum -> Just datum  -- Inline datum is directly available
+    NoOutputDatum -> Nothing  -- No datum attached
+
+getBridgeNFTDatum :: Datum -> Maybe BridgeNFTDatum
+getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
+
+getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
+getBridgeNFTDatumFromContext currencySymbol scriptContext = do
+    -- Find the input by currency symbol
+    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
+
+    -- Get the transaction output from the input info
+    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
+
+    -- Get the datum from the transaction output
+    datum <- getDatumFromTxOut txOut scriptContext
+
+    -- Get the BridgeNFTDatum from the datum
+    getBridgeNFTDatum datum
+
+getBridgeNFTDatumFromTxOut :: TxOut -> ScriptContext -> Maybe BridgeNFTDatum
+getBridgeNFTDatumFromTxOut ownOutput ctx = do
+  -- Get the Datum from the TxOut
+  datum <- getDatumFromTxOut ownOutput ctx
+  -- Extract the BridgeNFTDatum from the Datum
+  getBridgeNFTDatum datum
 
 bridgeTypedValidator ::
     BridgeParams ->
@@ -121,10 +166,11 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
   where
     conditions :: [Bool]
     conditions = case redeemer of
-        UpdateBridge committee oldDataHash newTopHash sig ->
+        UpdateBridge committee oldDataHash newTopHash newDataHash sig ->
             [
               multiSigValid committee newTopHash sig,
-              outputHasToken
+              outputHasNFT,
+              nftUpdated newTopHash newDataHash
             ]
 
     ownOutput :: TxOut
@@ -132,8 +178,14 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
         [o] -> o
         _   -> PlutusTx.traceError "expected exactly one output"
 
-    outputHasToken :: Bool
-    outputHasToken = assetClassValueOf (txOutValue ownOutput) (AssetClass ((bridge_nft_policy_id params), TokenName "")) PlutusTx.== 1
+    outputHasNFT :: Bool
+    outputHasNFT = assetClassValueOf (txOutValue ownOutput) (AssetClass ((bridge_nft_policy_id params), TokenName "")) PlutusTx.== 1
+
+    bridgeNFTDatum :: Maybe BridgeNFTDatum
+    bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
+
+    nftUpdated :: TopHash -> DataHash -> Bool
+    nftUpdated newTopHash newDataHash = bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash newDataHash)
 
 -- Function that checks if a SingleSig is valid
 singleSigValid :: PubKey -> TopHash -> SingleSig -> Bool
@@ -241,36 +293,3 @@ clientValidatorScript ::
 clientValidatorScript params =
     $$(PlutusTx.compile [||clientUntypedValidator||])
         `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 params
-
--- Function to find an input with a specific CurrencySymbol
-findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
-findInputByCurrencySymbol targetSymbol ctx =
-    let inputs = txInfoInputs $ scriptContextTxInfo ctx
-        findSymbol :: TxInInfo -> Bool
-        findSymbol txInInfo =
-          assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) (AssetClass (targetSymbol, TokenName "")) PlutusTx.== 1
-    in PlutusTx.find (findSymbol) inputs
-
--- Function to get a Datum from a TxOut, handling both inline data and hashed data
-getDatumFromTxOut :: TxOut -> ScriptContext -> Maybe Datum
-getDatumFromTxOut txOut ctx = case txOutDatum txOut of
-    OutputDatumHash dh -> findDatum dh (scriptContextTxInfo ctx)  -- Lookup the datum using the hash
-    OutputDatum datum -> Just datum  -- Inline datum is directly available
-    NoOutputDatum -> Nothing  -- No datum attached
-
-getBridgeNFTDatum :: Datum -> Maybe BridgeNFTDatum
-getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
-
-getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
-getBridgeNFTDatumFromContext currencySymbol scriptContext = do
-    -- Find the input by currency symbol
-    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
-
-    -- Get the transaction output from the input info
-    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
-
-    -- Get the datum from the transaction output
-    datum <- getDatumFromTxOut txOut scriptContext
-
-    -- Get the BridgeNFTDatum from the datum
-    getBridgeNFTDatum datum
