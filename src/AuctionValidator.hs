@@ -42,7 +42,7 @@ import PlutusTx.AsData qualified as PlutusTx
 import PlutusTx.Blueprint
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx.Show qualified as PlutusTx
-import PlutusTx.Builtins (equalsByteString, lessThanInteger, verifyEd25519Signature)
+import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger, verifyEd25519Signature, appendByteString, sha2_256)
 
 -- Hash that must be signed by each data operator
 data TopHash = TopHash PlutusTx.BuiltinByteString
@@ -52,6 +52,10 @@ data TopHash = TopHash PlutusTx.BuiltinByteString
 data DataHash = DataHash PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+instance Eq DataHash where
+    (DataHash dh1) == (DataHash dh2) = equalsByteString dh1 dh2
+instance PlutusTx.Eq DataHash where
+    (DataHash dh1) == (DataHash dh2) = equalsByteString dh1 dh2
 -- A public key
 data PubKey = PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
@@ -158,28 +162,28 @@ clientTypedValidator params clientDatum redeemer ctx@(ScriptContext txInfo _) =
     conditions = case redeemer of
         ClaimBounty proof ->
             [
-              merkleProofValid ctx (bounty_nft_policy_id params) proof
+              merkleProofValid ctx (bounty_nft_policy_id params) (bounty_data_hash params) proof
             ]
 
-merkleProofValid :: ScriptContext -> CurrencySymbol -> SimplifiedMerkleProof -> Bool
-merkleProofValid ctx csym proof =
+-- Verify that merkle proof is valid in the script context
+merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> SimplifiedMerkleProof -> Bool
+merkleProofValid ctx csym hash proof =
   case getBridgeNFTDatumFromContext csym ctx of
     Nothing -> False
-    Just _ -> False
+    Just (BridgeNFTDatum topHash) -> merkleProofTopHashValid topHash hash proof
 
-getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
-getBridgeNFTDatumFromContext currencySymbol scriptContext = do
-    -- Find the input by currency symbol
-    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
+hashConcat :: DataHash -> DataHash -> BuiltinByteString
+hashConcat (DataHash leftHash) (DataHash rightHash) =
+  sha2_256 (leftHash `appendByteString` rightHash)
 
-    -- Get the transaction output from the input info
-    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
-
-    -- Get the datum from the transaction output
-    datum <- getDatumFromTxOut txOut scriptContext
-
-    -- Get the BridgeNFTDatum from the datum
-    getBridgeNFTDatum datum
+-- The main function to validate the Merkle proof
+merkleProofTopHashValid :: TopHash -> DataHash -> SimplifiedMerkleProof -> Bool
+merkleProofTopHashValid (TopHash topHash) dataHash (SimplifiedMerkleProof leftHash rightHash) =
+    let
+        hashedConcat = hashConcat leftHash rightHash
+    in
+        hashedConcat PlutusTx.== topHash PlutusTx.&&
+        (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
 
 -- Function that checks if a SingleSig is valid for a given Challenge
 singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
@@ -229,3 +233,17 @@ getDatumFromTxOut txOut ctx = case txOutDatum txOut of
 
 getBridgeNFTDatum :: Datum -> Maybe BridgeNFTDatum
 getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
+
+getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
+getBridgeNFTDatumFromContext currencySymbol scriptContext = do
+    -- Find the input by currency symbol
+    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
+
+    -- Get the transaction output from the input info
+    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
+
+    -- Get the datum from the transaction output
+    datum <- getDatumFromTxOut txOut scriptContext
+
+    -- Get the BridgeNFTDatum from the datum
+    getBridgeNFTDatum datum
