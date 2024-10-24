@@ -91,7 +91,7 @@ PlutusTx.makeLift ''SingleSig
 PlutusTx.makeLift ''MultiSig
 
 -- Data stored in the bridge NFT UTXO's datum
-data BridgeNFTDatum = BridgeNFTDatum { top_hash :: TopHash }
+data BridgeNFTDatum = BridgeNFTDatum { top_hash :: TopHash, data_hash :: DataHash }
 
 PlutusTx.makeLift ''BridgeNFTDatum
 PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
@@ -109,6 +109,24 @@ data BridgeRedeemer = UpdateBridge
   , bridge_new_top_hash :: TopHash
   , bridge_sig :: MultiSig -- signature over new_top_hash
   }
+
+bridgeTypedValidator ::
+    BridgeParams ->
+    () ->
+    BridgeRedeemer ->
+    ScriptContext ->
+    Bool
+bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
+    PlutusTx.and conditions
+  where
+    conditions :: [Bool]
+    conditions = case redeemer of
+        UpdateBridge _ _ _ _ ->
+            [
+
+            ]
+
+--- CLIENT CONTRACT
 
 data SimplifiedMerkleProof =
   SimplifiedMerkleProof { left :: DataHash, right :: DataHash }
@@ -170,19 +188,19 @@ merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> SimplifiedMer
 merkleProofValid ctx csym hash proof =
   case getBridgeNFTDatumFromContext csym ctx of
     Nothing -> False
-    Just (BridgeNFTDatum topHash) -> merkleProofTopHashValid topHash hash proof
+    Just (BridgeNFTDatum _ nftDataHash) -> merkleProofNFTHashValid nftDataHash hash proof
 
 hashConcat :: DataHash -> DataHash -> BuiltinByteString
 hashConcat (DataHash leftHash) (DataHash rightHash) =
   sha2_256 (leftHash `appendByteString` rightHash)
 
 -- The main function to validate the Merkle proof
-merkleProofTopHashValid :: TopHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofTopHashValid (TopHash topHash) dataHash (SimplifiedMerkleProof leftHash rightHash) =
+merkleProofNFTHashValid :: DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
+merkleProofNFTHashValid (DataHash nftDataHash) dataHash (SimplifiedMerkleProof leftHash rightHash) =
     let
         hashedConcat = hashConcat leftHash rightHash
     in
-        hashedConcat PlutusTx.== topHash PlutusTx.&&
+        hashedConcat PlutusTx.== nftDataHash PlutusTx.&&
         (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
 
 -- Function that checks if a SingleSig is valid for a given Challenge
