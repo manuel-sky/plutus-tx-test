@@ -52,30 +52,42 @@ import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger,
 data TopHash = TopHash PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
+instance Eq TopHash where
+    (TopHash th1) == (TopHash th2) = equalsByteString th1 th2
+instance PlutusTx.Eq TopHash where
+    (TopHash th1) == (TopHash th2) = equalsByteString th1 th2
+
 -- Hash of the storage trie
 data DataHash = DataHash PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
 instance Eq DataHash where
     (DataHash dh1) == (DataHash dh2) = equalsByteString dh1 dh2
 instance PlutusTx.Eq DataHash where
     (DataHash dh1) == (DataHash dh2) = equalsByteString dh1 dh2
+
 -- A public key
 data PubKey = PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
 instance Eq PubKey where
     (PubKey pk1) == (PubKey pk2) = equalsByteString pk1 pk2
 instance PlutusTx.Eq PubKey where
     (PubKey pk1) == (PubKey pk2) = equalsByteString pk1 pk2
+
 -- List of data operators that must sign and minimum number of them that must sign
 data MultiSigPubKey = MultiSigPubKey [PubKey] Integer
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
 -- A single signature by a single data operator public key
 data SingleSig = SingleSig PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
 -- Signatures produced by data operators for top hash, must be in same order as multi-sig pubkeys
 data MultiSig = MultiSig [SingleSig]
   deriving stock (Generic)
@@ -101,11 +113,9 @@ data BridgeNFTDatum = BridgeNFTDatum
   }
 
 instance Eq BridgeNFTDatum where
-    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) =
-      equalsByteString th1 th2 && equalsByteString dh1 dh2
+  (BridgeNFTDatum th1 dh1) == (BridgeNFTDatum th2 dh2) = th1 == th2 && dh1 == dh2
 instance PlutusTx.Eq BridgeNFTDatum where
-    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) =
-      equalsByteString th1 th2 && equalsByteString dh1 dh2
+  (BridgeNFTDatum th1 dh1) == (BridgeNFTDatum th2 dh2) = th1 == th2 && dh1 == dh2
 
 PlutusTx.makeLift ''BridgeNFTDatum
 PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
