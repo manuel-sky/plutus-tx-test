@@ -32,9 +32,9 @@ import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.V1 (Lovelace, POSIXTime, PubKeyHash)
 import PlutusLedgerApi.V1.Address (toPubKeyHash)
 import PlutusLedgerApi.V1.Interval (contains)
-import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf, flattenValue)
-import PlutusLedgerApi.V2 (CurrencySymbol, Value, Datum (..), OutputDatum (..), ScriptContext (..),
-                           TokenName, TxInfo (..), TxOut (..), txOutDatum, TxInInfo, TxInfo,
+import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf, flattenValue, assetClassValueOf, AssetClass (..))
+import PlutusLedgerApi.V2 (CurrencySymbol, Value (..), Datum (..), OutputDatum (..), ScriptContext (..),
+                           TokenName (..), TxInfo (..), TxOut (..), txOutDatum, TxInInfo, TxInfo,
                            from, to, txInInfoResolved)
 import PlutusLedgerApi.V2.Contexts (getContinuingOutputs, findDatum)
 import PlutusTx
@@ -158,11 +158,28 @@ clientTypedValidator params clientDatum redeemer ctx@(ScriptContext txInfo _) =
     conditions = case redeemer of
         ClaimBounty proof ->
             [
-              merkleProofValid ctx proof
+              merkleProofValid ctx (bounty_nft_policy_id params) proof
             ]
 
-merkleProofValid :: ScriptContext -> SimplifiedMerkleProof -> Bool
-merkleProofValid ctx proof = True
+merkleProofValid :: ScriptContext -> CurrencySymbol -> SimplifiedMerkleProof -> Bool
+merkleProofValid ctx csym proof =
+  case getBridgeNFTDatumFromContext csym ctx of
+    Nothing -> False
+    Just _ -> False
+
+getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
+getBridgeNFTDatumFromContext currencySymbol scriptContext = do
+    -- Find the input by currency symbol
+    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
+
+    -- Get the transaction output from the input info
+    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
+
+    -- Get the datum from the transaction output
+    datum <- getDatumFromTxOut txOut scriptContext
+
+    -- Get the BridgeNFTDatum from the datum
+    getBridgeNFTDatum datum
 
 -- Function that checks if a SingleSig is valid for a given Challenge
 singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
@@ -196,36 +213,12 @@ clientValidatorScript params =
 
 -- Function to find an input with a specific CurrencySymbol
 findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
-findInputByCurrencySymbol cs ctx =
-    let
-        -- Get the transaction info
-        txInfo :: TxInfo
-        txInfo = scriptContextTxInfo ctx
-
-        -- Get the list of transaction inputs
-        inputs :: [TxInInfo]
-        inputs = txInfoInputs txInfo
-
-        -- Check if a given input contains the CurrencySymbol
-        inputHasCurrencySymbol :: TxInInfo -> Bool
-        inputHasCurrencySymbol txInInfo =
-            let
-                -- Get the Value from the input's resolved output
-                txOut :: TxOut
-                txOut = txInInfoResolved txInInfo
-
-                -- Get the value (map of CurrencySymbols to TokenNames and amounts)
-                value :: Value
-                value = txOutValue txOut
-
-                -- Flatten the value to get a list of (CurrencySymbol, TokenName, Integer)
-                flatValue = flattenValue value
-            in
-                -- Check if the CurrencySymbol exists in the flattened value
-                any (\(cs', _, _) -> cs' == cs) flatValue
-    in
-        -- Find the first input that has the CurrencySymbol
-        PlutusTx.find inputHasCurrencySymbol inputs
+findInputByCurrencySymbol targetSymbol ctx =
+    let inputs = txInfoInputs $ scriptContextTxInfo ctx
+        findSymbol :: TxInInfo -> Bool
+        findSymbol txInInfo =
+          assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) (AssetClass (targetSymbol, TokenName "")) PlutusTx.== 1
+    in PlutusTx.find (findSymbol) inputs
 
 -- Function to get a Datum from a TxOut, handling both inline data and hashed data
 getDatumFromTxOut :: TxOut -> ScriptContext -> Maybe Datum
@@ -233,3 +226,6 @@ getDatumFromTxOut txOut ctx = case txOutDatum txOut of
     OutputDatumHash dh -> findDatum dh (scriptContextTxInfo ctx)  -- Lookup the datum using the hash
     OutputDatum datum -> Just datum  -- Inline datum is directly available
     NoOutputDatum -> Nothing  -- No datum attached
+
+getBridgeNFTDatum :: Datum -> Maybe BridgeNFTDatum
+getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
