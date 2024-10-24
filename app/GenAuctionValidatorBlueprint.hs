@@ -28,19 +28,20 @@ import Data.Maybe (fromJust)
 import PlutusTx.Builtins.HasOpaque (stringToBuiltinByteString)
 import Text.Hex (Text, ByteString, decodeHex)
 import PlutusTx.Builtins (toBuiltin, fromBuiltin, BuiltinByteString)
+import PlutusLedgerApi.V2 (CurrencySymbol(..))
 
 hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
 hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
 
 pub1 = PubKey (fromJust (hexStringToBuiltinByteString "43004B8F43FAF0E3EAAAF55BB41DC53CBF09E42884267BAF8C1EA6903819122C"))
-pub2 = PubKey (fromJust (hexStringToBuiltinByteString "DE3B4832CC5DD4B8412926C23BDCDFD4503E808A37B069A7C42DE8749AF23D81"))
-pub3 = PubKey (fromJust (hexStringToBuiltinByteString "70F57BF6004DAF872A256E1482F9A0FDE9E45C523A1CD4A20E9CA3F78BB36565"))
+nft_currency_symbol = CurrencySymbol (fromJust (hexStringToBuiltinByteString "0A271556EB6FEFCE323D3CAC4C4E53CAE78E3DC9"))
+old_data_hash = DataHash (fromJust (hexStringToBuiltinByteString "55203019b1efae67e2b9b577ce5f881b8367f377"))
 
 clientParams :: ClientParams
 clientParams =
   ClientParams
-    { operators = MultiSigPubKey [pub1, pub2, pub3] 2
-    , challenge = Challenge (stringToBuiltinByteString "hello world")
+    { bounty_nft_policy_id = nft_currency_symbol
+    , bounty_data_hash = old_data_hash
     }
 
 clientContractBlueprint :: ContractBlueprint
