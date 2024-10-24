@@ -122,7 +122,9 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
 
 -- Initialization parameters for the bridge contract:
 -- The policy ID is the unique identifier of the NFT currency symbol (= hash of minting script)
-data BridgeParams = BridgeParams { bridge_nft_policy_id :: CurrencySymbol }
+data BridgeParams = BridgeParams
+  { bridge_nft_policy_id :: CurrencySymbol
+  }
 
 PlutusTx.makeLift ''BridgeParams
 PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
@@ -141,10 +143,11 @@ data BridgeRedeemer = UpdateBridge
 -- Function to find an input UTXO with a specific CurrencySymbol
 findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
 findInputByCurrencySymbol targetSymbol ctx =
-    let inputs = txInfoInputs $ scriptContextTxInfo ctx
+    let assetClass = AssetClass (targetSymbol, TokenName "")
+        inputs = txInfoInputs $ scriptContextTxInfo ctx
         findSymbol :: TxInInfo -> Bool
         findSymbol txInInfo =
-          assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) (AssetClass (targetSymbol, TokenName "")) PlutusTx.== 1
+          assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) assetClass PlutusTx.== 1
     in PlutusTx.find (findSymbol) inputs
 
 -- Function to get a Datum from a TxOut, handling both inline data and hashed data
