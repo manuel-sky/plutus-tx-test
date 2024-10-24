@@ -156,11 +156,13 @@ clientTypedValidator params clientDatum redeemer ctx@(ScriptContext txInfo _) =
   where
     conditions :: [Bool]
     conditions = case redeemer of
-        ClaimBounty multiSig ->
+        ClaimBounty proof ->
             [
-              -- The signatures match the challenge
-              -- multiSigValid (operators params) (target_hash params) multiSig
+              merkleProofValid ctx proof
             ]
+
+merkleProofValid :: ScriptContext -> SimplifiedMerkleProof -> Bool
+merkleProofValid ctx proof = True
 
 -- Function that checks if a SingleSig is valid for a given Challenge
 singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
