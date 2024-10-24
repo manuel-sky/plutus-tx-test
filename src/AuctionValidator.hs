@@ -121,10 +121,20 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
   where
     conditions :: [Bool]
     conditions = case redeemer of
-        UpdateBridge _ _ _ _ ->
+        UpdateBridge committee oldDataHash newTopHash sig ->
             [
-
+              multiSigValid committee newTopHash sig
             ]
+
+-- Function that checks if a SingleSig is valid
+singleSigValid :: PubKey -> TopHash -> SingleSig -> Bool
+singleSigValid (PubKey pubKey) (TopHash challenge) (SingleSig sig) =
+  verifyEd25519Signature pubKey challenge sig
+
+-- Main function to check if the MultiSig satisfies at least N valid unique signatures
+multiSigValid :: MultiSigPubKey -> TopHash -> MultiSig -> Bool
+multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
+    singleSigValid pubKey challenge singleSig
 
 --- CLIENT CONTRACT
 
@@ -202,16 +212,6 @@ merkleProofNFTHashValid (DataHash nftDataHash) dataHash (SimplifiedMerkleProof l
     in
         hashedConcat PlutusTx.== nftDataHash PlutusTx.&&
         (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
-
--- Function that checks if a SingleSig is valid for a given Challenge
-singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
-singleSigValid (PubKey pubKey) (DataHash challenge) (SingleSig sig) =
-  verifyEd25519Signature pubKey challenge sig
-
--- Main function to check if the MultiSig satisfies at least N valid unique signatures
-multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
-multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
-    singleSigValid pubKey challenge singleSig
 
 -- BLOCK2
 -- AuctionValidator.hs
