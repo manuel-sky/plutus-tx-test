@@ -24,6 +24,8 @@
 {-# OPTIONS_GHC -fno-unbox-strict-fields #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
+-- Docs: https://gist.github.com/manuel-sky/0d74d55d3a7add98276d804e12461c68
+
 module SkyContracts where
 
 import GHC.Generics (Generic)
