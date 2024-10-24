@@ -44,6 +44,12 @@ clientParams =
     , bounty_data_hash = old_data_hash
     }
 
+bridgeParams :: BridgeParams
+bridgeParams =
+  BridgeParams
+    { bridge_nft_policy_id = nft_currency_symbol
+    }
+
 clientContractBlueprint :: ContractBlueprint
 clientContractBlueprint =
   MkContractBlueprint
