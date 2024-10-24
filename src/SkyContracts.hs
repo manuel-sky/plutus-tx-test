@@ -50,7 +50,7 @@ import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger,
 
 --- CORE DATA TYPES
 
--- Hash of the storage trie
+-- A hash
 data DataHash = DataHash PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
@@ -99,13 +99,12 @@ PlutusTx.makeLift ''MultiSig
 -- Data stored in the bridge NFT UTXO's datum
 data BridgeNFTDatum = BridgeNFTDatum
   { top_hash :: DataHash
-  , data_hash :: DataHash
   }
 
 instance Eq BridgeNFTDatum where
-  (BridgeNFTDatum th1 dh1) == (BridgeNFTDatum th2 dh2) = th1 == th2 && dh1 == dh2
+  (BridgeNFTDatum th1) == (BridgeNFTDatum th2) = th1 == th2
 instance PlutusTx.Eq BridgeNFTDatum where
-  (BridgeNFTDatum th1 dh1) == (BridgeNFTDatum th2 dh2) = th1 == th2 && dh1 == dh2
+  (BridgeNFTDatum th1) == (BridgeNFTDatum th2) = th1 == th2
 
 PlutusTx.makeLift ''BridgeNFTDatum
 PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
@@ -124,7 +123,6 @@ data BridgeRedeemer = UpdateBridge
   { bridge_committee :: MultiSigPubKey
   , bridge_old_data_hash :: DataHash
   , bridge_new_top_hash :: DataHash
-  , bridge_new_data_hash :: DataHash
   , bridge_sig :: MultiSig -- signature over new_top_hash
   }
 
@@ -189,14 +187,14 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     conditions :: [Bool]
     conditions = case redeemer of
         -- Update the bridge state
-        UpdateBridge committee oldDataHash newTopHash newDataHash sig ->
+        UpdateBridge committee oldDataHash newTopHash sig ->
             [
               -- The top hash must be signed by the committee
               multiSigValid committee newTopHash sig,
               -- The NFT must be again included in the outputs
               outputHasNFT,
               -- The NFT's data must have been updated
-              nftUpdated newTopHash newDataHash
+              nftUpdated newTopHash
             ]
 
     ownOutput :: TxOut
@@ -214,9 +212,9 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
 
     -- The NFT UTXO's datum must match the new values for the root hashes
-    nftUpdated :: DataHash -> DataHash -> Bool
-    nftUpdated newTopHash newDataHash =
-      bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash newDataHash)
+    nftUpdated :: DataHash -> Bool
+    nftUpdated newTopHash =
+      bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash)
 
 -- Function that checks if a SingleSig is valid
 singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
@@ -257,7 +255,9 @@ PlutusTx.makeIsDataSchemaIndexed ''ClientParams [('ClientParams, 0)]
 -- Requests to contract, can claim bounty
 data ClientRedeemer
     = ClaimBounty
-        { proof :: SimplifiedMerkleProof }
+        { proof :: SimplifiedMerkleProof
+        , multi_sig_hash :: DataHash
+        }
     deriving stock (Generic)
     deriving anyclass (HasBlueprintDefinition)
 
@@ -277,31 +277,41 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     conditions :: [Bool]
     conditions = case redeemer of
         -- Claim the bounty
-        ClaimBounty proof ->
+        ClaimBounty proof multiSigHash ->
             [
               -- The Merkle proof must match the root hash stored in the NFT
-              merkleProofValid ctx (bounty_nft_policy_id params) (bounty_target_hash params) proof
+              merkleProofValid ctx (bounty_nft_policy_id params) (bounty_target_hash params) multiSigHash proof
             ]
 
 -- Verify that merkle proof is valid by looking up NFT UTXO in the script context
-merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofValid ctx csym targetHash proof =
+merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
+merkleProofValid ctx csym targetHash multiSigHash proof =
   case getBridgeNFTDatumFromContext csym ctx of
     Nothing -> False
-    Just (BridgeNFTDatum _ nftHash) -> merkleProofNFTHashValid nftHash targetHash proof
+    Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigHash proof
+
+-- Hashes the concatenation of a pair of hashes
+pairHash :: DataHash -> DataHash -> DataHash
+pairHash (DataHash a) (DataHash b) = DataHash (sha2_256 (a `appendByteString` b))
 
 -- Hashes a merkle proof to produce the root data hash
-merkleProofToDataHash :: SimplifiedMerkleProof -> BuiltinByteString
-merkleProofToDataHash (SimplifiedMerkleProof (DataHash leftHash) (DataHash rightHash)) =
-  sha2_256 (leftHash `appendByteString` rightHash)
+merkleProofToDataHash :: SimplifiedMerkleProof -> DataHash
+merkleProofToDataHash (SimplifiedMerkleProof leftHash rightHash) =
+  pairHash leftHash rightHash
 
--- The main function to validate the Merkle proof against the root data hash stored in the NFT:
--- Check that the merkle proof hashes to the NFT's root data hash, and either its left or right child
--- is the bounty's target data hash.
-merkleProofNFTHashValid :: DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofNFTHashValid (DataHash nftHash) targetHash proof@(SimplifiedMerkleProof leftHash rightHash) =
+-- Computes the top hash from the data trie hash and the committe hash
+topHash :: DataHash -> DataHash -> DataHash
+topHash trieHash multiSigHash =
+  pairHash trieHash multiSigHash
+
+-- The main function to validate the Merkle proof against the root
+-- data hash stored in the NFT: Check that the merkle proof and
+-- multisig hash hashes to the top hash, and either the left or right
+-- child of the merkle proof is the bounty's target data hash.
+merkleProofNFTHashValid :: DataHash -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
+merkleProofNFTHashValid nftTopHash targetHash multiSigHash proof@(SimplifiedMerkleProof leftHash rightHash) =
   let proofHash = merkleProofToDataHash proof in
-    proofHash PlutusTx.== nftHash PlutusTx.&&
+    (topHash proofHash multiSigHash) PlutusTx.== nftTopHash PlutusTx.&&
     (targetHash PlutusTx.== leftHash PlutusTx.|| targetHash PlutusTx.== rightHash)
 
 --- UNTYPED VALIDATORS BOILERPLATE
