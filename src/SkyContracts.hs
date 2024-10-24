@@ -98,7 +98,7 @@ PlutusTx.makeLift ''MultiSig
 
 -- Data stored in the bridge NFT UTXO's datum
 data BridgeNFTDatum = BridgeNFTDatum
-  { top_hash :: DataHash
+  { bridgeNFTTopHash :: DataHash
   }
 
 instance Eq BridgeNFTDatum where
@@ -112,7 +112,7 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
 -- Initialization parameters for the bridge contract:
 -- The policy ID is the unique identifier of the NFT currency symbol (= hash of minting script)
 data BridgeParams = BridgeParams
-  { bridge_nft_policy_id :: CurrencySymbol
+  { bridgeNFTCurrencySymbol :: CurrencySymbol
   }
 
 PlutusTx.makeLift ''BridgeParams
@@ -120,10 +120,10 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
 
 -- Updates the bridge NFT
 data BridgeRedeemer = UpdateBridge
-  { bridge_committee :: MultiSigPubKey
-  , bridge_old_data_hash :: DataHash
-  , bridge_new_top_hash :: DataHash
-  , bridge_sig :: MultiSig -- signature over new_top_hash
+  { bridgeCommittee :: MultiSigPubKey
+  , bridgeOldDataHash :: DataHash
+  , bridgeNewTopHash :: DataHash
+  , bridgeSig :: MultiSig -- signature over new top hash
   }
 
 PlutusTx.makeLift ''BridgeRedeemer
@@ -205,7 +205,7 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     -- There must be exactly one output UTXO with our NFT's unique currency symbol
     outputHasNFT :: Bool
     outputHasNFT =
-      let assetClass = (AssetClass ((bridge_nft_policy_id params), TokenName "")) in
+      let assetClass = (AssetClass ((bridgeNFTCurrencySymbol params), TokenName "")) in
       assetClassValueOf (txOutValue ownOutput) assetClass PlutusTx.== 1
 
     bridgeNFTDatum :: Maybe BridgeNFTDatum
@@ -241,9 +241,9 @@ PlutusTx.makeIsDataSchemaIndexed ''SimplifiedMerkleProof [('SimplifiedMerkleProo
 
 -- Main parameters / initialization for client contract
 data ClientParams = ClientParams
-  { bounty_nft_policy_id :: CurrencySymbol
+  { bountyNFTCurrencySymbol :: CurrencySymbol
     -- ^ Unique currency symbol (hash of minting policy) of the bridge contract NFT
-  , bounty_target_hash :: DataHash
+  , bountyTargetHash :: DataHash
     -- ^ Hash of data that must be present in storage trie
   }
   deriving stock (Generic)
@@ -256,7 +256,7 @@ PlutusTx.makeIsDataSchemaIndexed ''ClientParams [('ClientParams, 0)]
 data ClientRedeemer
     = ClaimBounty
         { proof :: SimplifiedMerkleProof
-        , multi_sig_hash :: DataHash
+        , multiSigHash :: DataHash
         }
     deriving stock (Generic)
     deriving anyclass (HasBlueprintDefinition)
@@ -280,7 +280,7 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
         ClaimBounty proof multiSigHash ->
             [
               -- The Merkle proof must match the root hash stored in the NFT
-              merkleProofValid ctx (bounty_nft_policy_id params) (bounty_target_hash params) multiSigHash proof
+              merkleProofValid ctx (bountyNFTCurrencySymbol params) (bountyTargetHash params) multiSigHash proof
             ]
 
 -- Verify that merkle proof is valid by looking up NFT UTXO in the script context

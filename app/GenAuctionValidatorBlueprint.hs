@@ -34,20 +34,20 @@ hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
 hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
 
 pub1 = PubKey (fromJust (hexStringToBuiltinByteString "43004B8F43FAF0E3EAAAF55BB41DC53CBF09E42884267BAF8C1EA6903819122C"))
-nft_currency_symbol = CurrencySymbol (fromJust (hexStringToBuiltinByteString "0A271556EB6FEFCE323D3CAC4C4E53CAE78E3DC9"))
-old_data_hash = DataHash (fromJust (hexStringToBuiltinByteString "55203019b1efae67e2b9b577ce5f881b8367f377"))
+nftCurrencySymbol = CurrencySymbol (fromJust (hexStringToBuiltinByteString "0A271556EB6FEFCE323D3CAC4C4E53CAE78E3DC9"))
+oldDataHash = DataHash (fromJust (hexStringToBuiltinByteString "55203019b1efae67e2b9b577ce5f881b8367f377"))
 
 clientParams :: ClientParams
 clientParams =
   ClientParams
-    { bounty_nft_policy_id = nft_currency_symbol
-    , bounty_target_hash = old_data_hash
+    { bountyNFTCurrencySymbol = nftCurrencySymbol
+    , bountyTargetHash = oldDataHash
     }
 
 bridgeParams :: BridgeParams
 bridgeParams =
   BridgeParams
-    { bridge_nft_policy_id = nft_currency_symbol
+    { bridgeNFTCurrencySymbol = nftCurrencySymbol
     }
 
 clientContractBlueprint :: ContractBlueprint
