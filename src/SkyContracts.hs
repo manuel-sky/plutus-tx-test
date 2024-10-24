@@ -283,7 +283,7 @@ merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> SimplifiedMer
 merkleProofValid ctx csym targetHash proof =
   case getBridgeNFTDatumFromContext csym ctx of
     Nothing -> False
-    Just (BridgeNFTDatum _ nftDataHash) -> merkleProofNFTHashValid nftDataHash targetHash proof
+    Just (BridgeNFTDatum _ nftHash) -> merkleProofNFTHashValid nftHash targetHash proof
 
 -- Hashes a merkle proof to produce the root data hash
 merkleProofToDataHash :: SimplifiedMerkleProof -> BuiltinByteString
@@ -291,12 +291,12 @@ merkleProofToDataHash (SimplifiedMerkleProof (DataHash leftHash) (DataHash right
   sha2_256 (leftHash `appendByteString` rightHash)
 
 -- The main function to validate the Merkle proof against the root data hash stored in the NFT:
--- Check that the merkle proof hashes to the root data hash, and either its left or right child
+-- Check that the merkle proof hashes to the NFT's root data hash, and either its left or right child
 -- is the bounty's target data hash.
 merkleProofNFTHashValid :: DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofNFTHashValid (DataHash nftDataHash) targetHash proof@(SimplifiedMerkleProof leftHash rightHash) =
-  let merkleDataHash = merkleProofToDataHash proof in
-    merkleDataHash PlutusTx.== nftDataHash PlutusTx.&&
+merkleProofNFTHashValid (DataHash nftHash) targetHash proof@(SimplifiedMerkleProof leftHash rightHash) =
+  let proofHash = merkleProofToDataHash proof in
+    proofHash PlutusTx.== nftHash PlutusTx.&&
     (targetHash PlutusTx.== leftHash PlutusTx.|| targetHash PlutusTx.== rightHash)
 
 {-# INLINEABLE clientUntypedValidator #-}
