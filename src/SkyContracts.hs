@@ -110,7 +110,7 @@ PlutusTx.makeLift ''BridgeNFTDatum
 PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
 
 -- Initialization parameters for the bridge contract:
--- The policy ID is the unique identifier of the NFT currency symbol (= hash of minting script)
+-- The currency symbol is the unique identifier of the NFT currency (= hash of minting script)
 data BridgeParams = BridgeParams
   { bridgeNFTCurrencySymbol :: CurrencySymbol
   }
@@ -244,7 +244,7 @@ data ClientParams = ClientParams
   { bountyNFTCurrencySymbol :: CurrencySymbol
     -- ^ Unique currency symbol (hash of minting policy) of the bridge contract NFT
   , bountyTargetHash :: DataHash
-    -- ^ Hash of data that must be present in storage trie
+    -- ^ Hash of data that must be proven to be present in storage trie
   }
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
