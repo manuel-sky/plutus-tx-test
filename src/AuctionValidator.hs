@@ -34,9 +34,9 @@ import PlutusLedgerApi.V1.Address (toPubKeyHash)
 import PlutusLedgerApi.V1.Interval (contains)
 import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf, flattenValue)
 import PlutusLedgerApi.V2 (CurrencySymbol, Value, Datum (..), OutputDatum (..), ScriptContext (..),
-                           TokenName, TxInfo (..), TxOut (..), TxInInfo, TxInfo,
+                           TokenName, TxInfo (..), TxOut (..), txOutDatum, TxInInfo, TxInfo,
                            from, to, txInInfoResolved)
-import PlutusLedgerApi.V2.Contexts (getContinuingOutputs)
+import PlutusLedgerApi.V2.Contexts (getContinuingOutputs, findDatum)
 import PlutusTx
 import PlutusTx.AsData qualified as PlutusTx
 import PlutusTx.Blueprint
@@ -224,3 +224,10 @@ findInputByCurrencySymbol cs ctx =
     in
         -- Find the first input that has the CurrencySymbol
         PlutusTx.find inputHasCurrencySymbol inputs
+
+-- Function to get a Datum from a TxOut, handling both inline data and hashed data
+getDatumFromTxOut :: TxOut -> ScriptContext -> Maybe Datum
+getDatumFromTxOut txOut ctx = case txOutDatum txOut of
+    OutputDatumHash dh -> findDatum dh (scriptContextTxInfo ctx)  -- Lookup the datum using the hash
+    OutputDatum datum -> Just datum  -- Inline datum is directly available
+    NoOutputDatum -> Nothing  -- No datum attached
