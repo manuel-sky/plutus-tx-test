@@ -183,6 +183,7 @@ getBridgeNFTDatumFromTxOut ownOutput ctx = do
 
 --- BRIDGE CONTRACT
 
+-- Validates bridge transactions
 bridgeTypedValidator ::
     BridgeParams ->
     () ->
@@ -194,13 +195,14 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
   where
     conditions :: [Bool]
     conditions = case redeemer of
+        -- Update the bridge state
         UpdateBridge committee oldDataHash newTopHash newDataHash sig ->
             [
-              -- The top hash is signed by the committee
+              -- The top hash must be signed by the committee
               multiSigValid committee newTopHash sig,
-              -- The NFT is again included in the outputs
+              -- The NFT must be again included in the outputs
               outputHasNFT,
-              -- The NFT's data has been updated
+              -- The NFT's data must have been updated
               nftUpdated newTopHash newDataHash
             ]
 
@@ -233,6 +235,8 @@ multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
 
 --- CLIENT CONTRACT
 
+-- Trivial form of Merkle proof for a left and a right data hash -
+-- i.e. a one-level binary Merkle tree.
 data SimplifiedMerkleProof =
   SimplifiedMerkleProof { left :: DataHash, right :: DataHash }
   deriving stock (Generic)
@@ -262,6 +266,7 @@ data ClientRedeemer
 PlutusTx.makeLift ''ClientRedeemer
 PlutusTx.makeIsDataSchemaIndexed ''ClientRedeemer [('ClaimBounty, 0)]
 
+-- Validates bounty/client transactions
 clientTypedValidator ::
     ClientParams ->
     () ->
@@ -273,12 +278,14 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
   where
     conditions :: [Bool]
     conditions = case redeemer of
+        -- Claim the bounty
         ClaimBounty proof ->
             [
+              -- The Merkle proof must match the root hash stored in the NFT
               merkleProofValid ctx (bounty_nft_policy_id params) (bounty_target_hash params) proof
             ]
 
--- Verify that merkle proof is valid in the script context
+-- Verify that merkle proof is valid by looking up NFT UTXO in the script context
 merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> SimplifiedMerkleProof -> Bool
 merkleProofValid ctx csym targetHash proof =
   case getBridgeNFTDatumFromContext csym ctx of
