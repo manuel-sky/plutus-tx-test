@@ -216,7 +216,7 @@ singleSigValid (PubKey pubKey) (TopHash challenge) (SingleSig sig) =
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
 multiSigValid :: MultiSigPubKey -> TopHash -> MultiSig -> Bool
 multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
-    singleSigValid pubKey challenge singleSig
+  singleSigValid pubKey challenge singleSig
 
 --- CLIENT CONTRACT
 
