@@ -48,6 +48,8 @@ import PlutusTx.Show qualified as PlutusTx
 import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger,
                           verifyEd25519Signature, appendByteString, sha2_256)
 
+--- CORE DATA TYPES
+
 -- Hash that must be signed by each data operator
 data TopHash = TopHash PlutusTx.BuiltinByteString
   deriving stock (Generic)
@@ -137,6 +139,9 @@ data BridgeRedeemer = UpdateBridge
   , bridge_new_data_hash :: DataHash
   , bridge_sig :: MultiSig -- signature over new_top_hash
   }
+
+PlutusTx.makeLift ''BridgeRedeemer
+PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]
 
 --- UTILITIES
 
@@ -305,6 +310,26 @@ merkleProofNFTHashValid (DataHash nftHash) targetHash proof@(SimplifiedMerklePro
   let proofHash = merkleProofToDataHash proof in
     proofHash PlutusTx.== nftHash PlutusTx.&&
     (targetHash PlutusTx.== leftHash PlutusTx.|| targetHash PlutusTx.== rightHash)
+
+--- UNTYPED VALIDATORS BOILERPLATE
+
+{-# INLINEABLE bridgeUntypedValidator #-}
+bridgeUntypedValidator :: BridgeParams -> BuiltinData -> BuiltinData -> BuiltinData -> PlutusTx.BuiltinUnit
+bridgeUntypedValidator params datum redeemer ctx =
+    PlutusTx.check
+        ( bridgeTypedValidator
+            params
+            (PlutusTx.unsafeFromBuiltinData datum)
+            (PlutusTx.unsafeFromBuiltinData redeemer)
+            (PlutusTx.unsafeFromBuiltinData ctx)
+        )
+
+bridgeValidatorScript ::
+    BridgeParams ->
+    CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> PlutusTx.BuiltinUnit)
+bridgeValidatorScript params =
+    $$(PlutusTx.compile [||bridgeUntypedValidator||])
+        `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 params
 
 {-# INLINEABLE clientUntypedValidator #-}
 clientUntypedValidator :: ClientParams -> BuiltinData -> BuiltinData -> BuiltinData -> PlutusTx.BuiltinUnit
