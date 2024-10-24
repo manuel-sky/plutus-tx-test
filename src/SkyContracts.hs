@@ -258,7 +258,7 @@ PlutusTx.makeIsDataSchemaIndexed ''ClientParams [('ClientParams, 0)]
 data ClientRedeemer
     = ClaimBounty
         { proof :: SimplifiedMerkleProof
-        , multiSigHash :: DataHash
+        , multiSigPubKeyHash :: DataHash
         }
     deriving stock (Generic)
     deriving anyclass (HasBlueprintDefinition)
@@ -279,18 +279,18 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     conditions :: [Bool]
     conditions = case redeemer of
         -- Claim the bounty
-        ClaimBounty proof multiSigHash ->
+        ClaimBounty proof multiSigPubKeyHash ->
             [
               -- The Merkle proof must match the root hash stored in the NFT
-              merkleProofValid ctx (bountyNFTCurrencySymbol params) (bountyTargetHash params) multiSigHash proof
+              merkleProofValid ctx (bountyNFTCurrencySymbol params) (bountyTargetHash params) multiSigPubKeyHash proof
             ]
 
 -- Verify that merkle proof is valid by looking up NFT UTXO in the script context
 merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofValid ctx csym targetHash multiSigHash proof =
+merkleProofValid ctx csym targetHash multiSigPubKeyHash proof =
   case getBridgeNFTDatumFromContext csym ctx of
     Nothing -> False
-    Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigHash proof
+    Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigPubKeyHash proof
 
 -- Hashes the concatenation of a pair of hashes
 pairHash :: DataHash -> DataHash -> DataHash
@@ -303,17 +303,17 @@ merkleProofToDataHash (SimplifiedMerkleProof leftHash rightHash) =
 
 -- Computes the top hash from the data trie hash and the committe hash
 topHash :: DataHash -> DataHash -> DataHash
-topHash trieHash multiSigHash =
-  pairHash trieHash multiSigHash
+topHash trieHash multiSigPubKeyHash =
+  pairHash trieHash multiSigPubKeyHash
 
 -- The main function to validate the Merkle proof against the root
 -- data hash stored in the NFT: Check that the merkle proof and
 -- multisig hash hashes to the top hash, and either the left or right
 -- child of the merkle proof is the bounty's target data hash.
 merkleProofNFTHashValid :: DataHash -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofNFTHashValid nftTopHash targetHash multiSigHash proof@(SimplifiedMerkleProof leftHash rightHash) =
+merkleProofNFTHashValid nftTopHash targetHash multiSigPubKeyHash proof@(SimplifiedMerkleProof leftHash rightHash) =
   let proofHash = merkleProofToDataHash proof in
-    (topHash proofHash multiSigHash) PlutusTx.== nftTopHash PlutusTx.&&
+    (topHash proofHash multiSigPubKeyHash) PlutusTx.== nftTopHash PlutusTx.&&
     (targetHash PlutusTx.== leftHash PlutusTx.|| targetHash PlutusTx.== rightHash)
 
 --- UNTYPED VALIDATORS BOILERPLATE
