@@ -272,19 +272,20 @@ merkleProofValid ctx csym hash proof =
     Nothing -> False
     Just (BridgeNFTDatum _ nftDataHash) -> merkleProofNFTHashValid nftDataHash hash proof
 
-hashConcat :: DataHash -> DataHash -> BuiltinByteString
-hashConcat (DataHash leftHash) (DataHash rightHash) =
+-- Hashes a merkle proof to produce the root data hash
+merkleProofToDataHash :: SimplifiedMerkleProof -> BuiltinByteString
+merkleProofToDataHash (SimplifiedMerkleProof (DataHash leftHash) (DataHash rightHash)) =
   sha2_256 (leftHash `appendByteString` rightHash)
 
--- The main function to validate the Merkle proof
+-- The main function to validate the Merkle proof against the root data hash stored in the NFT:
+-- Check that the merkle proof hashes to the root data hash, and either its left or right child
+-- is the target data hash.
 merkleProofNFTHashValid :: DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofNFTHashValid (DataHash nftDataHash) dataHash (SimplifiedMerkleProof leftHash rightHash) =
-  let hashedConcat = hashConcat leftHash rightHash in
-    hashedConcat PlutusTx.== nftDataHash PlutusTx.&&
+merkleProofNFTHashValid (DataHash nftDataHash) dataHash proof@(SimplifiedMerkleProof leftHash rightHash) =
+  let merkleDataHash = merkleProofToDataHash proof in
+    merkleDataHash PlutusTx.== nftDataHash PlutusTx.&&
     (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
 
--- BLOCK2
--- AuctionValidator.hs
 {-# INLINEABLE clientUntypedValidator #-}
 clientUntypedValidator :: ClientParams -> BuiltinData -> BuiltinData -> BuiltinData -> PlutusTx.BuiltinUnit
 clientUntypedValidator params datum redeemer ctx =
