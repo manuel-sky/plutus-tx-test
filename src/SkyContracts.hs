@@ -216,6 +216,7 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
         [o] -> o
         _   -> PlutusTx.traceError "expected exactly one output"
 
+    -- There must be exactly one output UTXO with our NFT's unique currency symbol
     outputHasNFT :: Bool
     outputHasNFT =
       let assetClass = (AssetClass ((bridge_nft_policy_id params), TokenName "")) in
@@ -224,6 +225,7 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     bridgeNFTDatum :: Maybe BridgeNFTDatum
     bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
 
+    -- The NFT UTXO's datum must match the new values for the root hashes
     nftUpdated :: TopHash -> DataHash -> Bool
     nftUpdated newTopHash newDataHash =
       bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash newDataHash)
@@ -234,6 +236,7 @@ singleSigValid (PubKey pubKey) (TopHash challenge) (SingleSig sig) =
   verifyEd25519Signature pubKey challenge sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
+-- (Currently enforces that there's only one signature in the multisig for simplicity.)
 multiSigValid :: MultiSigPubKey -> TopHash -> MultiSig -> Bool
 multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
   singleSigValid pubKey challenge singleSig
@@ -252,8 +255,10 @@ PlutusTx.makeIsDataSchemaIndexed ''SimplifiedMerkleProof [('SimplifiedMerkleProo
 
 -- Main parameters / initialization for client contract
 data ClientParams = ClientParams
-  { bounty_nft_policy_id :: CurrencySymbol -- Unique currency symbol (hash of minting policy) of the bridge contract NFT
-  , bounty_target_hash :: DataHash -- Hash of data that must be present in storage trie
+  { bounty_nft_policy_id :: CurrencySymbol
+    -- ^ Unique currency symbol (hash of minting policy) of the bridge contract NFT
+  , bounty_target_hash :: DataHash
+    -- ^ Hash of data that must be present in storage trie
   }
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
