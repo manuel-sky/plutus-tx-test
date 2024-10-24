@@ -32,9 +32,10 @@ import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.V1 (Lovelace, POSIXTime, PubKeyHash)
 import PlutusLedgerApi.V1.Address (toPubKeyHash)
 import PlutusLedgerApi.V1.Interval (contains)
-import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf)
-import PlutusLedgerApi.V2 (CurrencySymbol, Datum (..), OutputDatum (..), ScriptContext (..),
-                           TokenName, TxInfo (..), TxOut (..), from, to)
+import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf, flattenValue)
+import PlutusLedgerApi.V2 (CurrencySymbol, Value, Datum (..), OutputDatum (..), ScriptContext (..),
+                           TokenName, TxInfo (..), TxOut (..), TxInInfo, TxInfo,
+                           from, to, txInInfoResolved)
 import PlutusLedgerApi.V2.Contexts (getContinuingOutputs)
 import PlutusTx
 import PlutusTx.AsData qualified as PlutusTx
@@ -191,3 +192,35 @@ clientValidatorScript params =
     $$(PlutusTx.compile [||clientUntypedValidator||])
         `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 params
 
+-- Function to find an input with a specific CurrencySymbol
+findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
+findInputByCurrencySymbol cs ctx =
+    let
+        -- Get the transaction info
+        txInfo :: TxInfo
+        txInfo = scriptContextTxInfo ctx
+
+        -- Get the list of transaction inputs
+        inputs :: [TxInInfo]
+        inputs = txInfoInputs txInfo
+
+        -- Check if a given input contains the CurrencySymbol
+        inputHasCurrencySymbol :: TxInInfo -> Bool
+        inputHasCurrencySymbol txInInfo =
+            let
+                -- Get the Value from the input's resolved output
+                txOut :: TxOut
+                txOut = txInInfoResolved txInInfo
+
+                -- Get the value (map of CurrencySymbols to TokenNames and amounts)
+                value :: Value
+                value = txOutValue txOut
+
+                -- Flatten the value to get a list of (CurrencySymbol, TokenName, Integer)
+                flatValue = flattenValue value
+            in
+                -- Check if the CurrencySymbol exists in the flattened value
+                any (\(cs', _, _) -> cs' == cs) flatValue
+    in
+        -- Find the first input that has the CurrencySymbol
+        PlutusTx.find inputHasCurrencySymbol inputs
