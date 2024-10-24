@@ -32,9 +32,12 @@ import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.V1 (Lovelace, POSIXTime, PubKeyHash)
 import PlutusLedgerApi.V1.Address (toPubKeyHash)
 import PlutusLedgerApi.V1.Interval (contains)
-import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf, flattenValue, assetClassValueOf, AssetClass (..))
-import PlutusLedgerApi.V2 (CurrencySymbol, Value (..), Datum (..), OutputDatum (..), ScriptContext (..),
-                           TokenName (..), TxInfo (..), TxOut (..), txOutDatum, TxInInfo, TxInfo,
+import PlutusLedgerApi.V1.Value (lovelaceValueOf, valueOf, flattenValue,
+                                 assetClassValueOf, AssetClass (..))
+import PlutusLedgerApi.V2 (CurrencySymbol, Value (..), Datum (..),
+                           OutputDatum (..), ScriptContext (..),
+                           TokenName (..), TxInfo (..), TxOut (..),
+                           txOutDatum, TxInInfo, TxInfo,
                            from, to, txInInfoResolved)
 import PlutusLedgerApi.V2.Contexts (getContinuingOutputs, findDatum)
 import PlutusTx
@@ -42,7 +45,8 @@ import PlutusTx.AsData qualified as PlutusTx
 import PlutusTx.Blueprint
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx.Show qualified as PlutusTx
-import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger, verifyEd25519Signature, appendByteString, sha2_256)
+import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger,
+                          verifyEd25519Signature, appendByteString, sha2_256)
 
 -- Hash that must be signed by each data operator
 data TopHash = TopHash PlutusTx.BuiltinByteString
@@ -91,11 +95,17 @@ PlutusTx.makeLift ''SingleSig
 PlutusTx.makeLift ''MultiSig
 
 -- Data stored in the bridge NFT UTXO's datum
-data BridgeNFTDatum = BridgeNFTDatum { top_hash :: TopHash, data_hash :: DataHash }
+data BridgeNFTDatum = BridgeNFTDatum
+  { top_hash :: TopHash
+  , data_hash :: DataHash
+  }
+
 instance Eq BridgeNFTDatum where
-    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) = equalsByteString th1 th2 && equalsByteString dh1 dh2
+    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) =
+      equalsByteString th1 th2 && equalsByteString dh1 dh2
 instance PlutusTx.Eq BridgeNFTDatum where
-    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) = equalsByteString th1 th2 && equalsByteString dh1 dh2
+    (BridgeNFTDatum (TopHash th1) (DataHash dh1)) == (BridgeNFTDatum (TopHash th2) (DataHash dh2)) =
+      equalsByteString th1 th2 && equalsByteString dh1 dh2
 
 PlutusTx.makeLift ''BridgeNFTDatum
 PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
@@ -107,6 +117,7 @@ data BridgeParams = BridgeParams { bridge_nft_policy_id :: CurrencySymbol }
 PlutusTx.makeLift ''BridgeParams
 PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
 
+-- Updates the bridge NFT
 data BridgeRedeemer = UpdateBridge
   { bridge_committee :: MultiSigPubKey
   , bridge_old_data_hash :: DataHash
@@ -115,7 +126,9 @@ data BridgeRedeemer = UpdateBridge
   , bridge_sig :: MultiSig -- signature over new_top_hash
   }
 
--- Function to find an input with a specific CurrencySymbol
+--- UTILITIES
+
+-- Function to find an input UTXO with a specific CurrencySymbol
 findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
 findInputByCurrencySymbol targetSymbol ctx =
     let inputs = txInfoInputs $ scriptContextTxInfo ctx
@@ -131,29 +144,31 @@ getDatumFromTxOut txOut ctx = case txOutDatum txOut of
     OutputDatum datum -> Just datum  -- Inline datum is directly available
     NoOutputDatum -> Nothing  -- No datum attached
 
+-- Deserialize a serialized bridge NFT datum
 getBridgeNFTDatum :: Datum -> Maybe BridgeNFTDatum
 getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
 
+-- Given a script context, find the bridge NFT UTXO
 getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
 getBridgeNFTDatumFromContext currencySymbol scriptContext = do
     -- Find the input by currency symbol
     inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
-
     -- Get the transaction output from the input info
     let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
-
     -- Get the datum from the transaction output
     datum <- getDatumFromTxOut txOut scriptContext
-
     -- Get the BridgeNFTDatum from the datum
     getBridgeNFTDatum datum
 
+-- Given a transaction output extract its serialized bridge NFT datum
 getBridgeNFTDatumFromTxOut :: TxOut -> ScriptContext -> Maybe BridgeNFTDatum
 getBridgeNFTDatumFromTxOut ownOutput ctx = do
   -- Get the Datum from the TxOut
   datum <- getDatumFromTxOut ownOutput ctx
   -- Extract the BridgeNFTDatum from the Datum
   getBridgeNFTDatum datum
+
+--- BRIDGE CONTRACT
 
 bridgeTypedValidator ::
     BridgeParams ->
@@ -168,8 +183,11 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     conditions = case redeemer of
         UpdateBridge committee oldDataHash newTopHash newDataHash sig ->
             [
+              -- The top hash is signed by the committee
               multiSigValid committee newTopHash sig,
+              -- The NFT is again included in the outputs
               outputHasNFT,
+              -- The NFT's data has been updated
               nftUpdated newTopHash newDataHash
             ]
 
@@ -179,13 +197,16 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
         _   -> PlutusTx.traceError "expected exactly one output"
 
     outputHasNFT :: Bool
-    outputHasNFT = assetClassValueOf (txOutValue ownOutput) (AssetClass ((bridge_nft_policy_id params), TokenName "")) PlutusTx.== 1
+    outputHasNFT =
+      let assetClass = (AssetClass ((bridge_nft_policy_id params), TokenName "")) in
+      assetClassValueOf (txOutValue ownOutput) assetClass PlutusTx.== 1
 
     bridgeNFTDatum :: Maybe BridgeNFTDatum
     bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
 
     nftUpdated :: TopHash -> DataHash -> Bool
-    nftUpdated newTopHash newDataHash = bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash newDataHash)
+    nftUpdated newTopHash newDataHash =
+      bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash newDataHash)
 
 -- Function that checks if a SingleSig is valid
 singleSigValid :: PubKey -> TopHash -> SingleSig -> Bool
