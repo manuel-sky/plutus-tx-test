@@ -56,7 +56,7 @@ clientContractBlueprint =
     { contractId = Just "client-validator"
     , contractPreamble = clientPreamble
     , contractValidators = Set.singleton myClientValidator
-    , contractDefinitions = deriveDefinitions @[ClientParams, ClientDatum, ClientRedeemer]
+    , contractDefinitions = deriveDefinitions @[ClientParams, ClientRedeemer]
     }
 
 clientPreamble :: Preamble

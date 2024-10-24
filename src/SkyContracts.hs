@@ -249,23 +249,13 @@ data ClientRedeemer
 PlutusTx.makeLift ''ClientRedeemer
 PlutusTx.makeIsDataSchemaIndexed ''ClientRedeemer [('ClaimBounty, 0)]
 
--- The datum is the state of the smart contract
--- Just empty state for now, might later distinguish between running and claimed bounty
--- XXX remove, no datum needed
-data ClientDatum = ClientDatum
-  deriving stock (Generic)
-  deriving anyclass (HasBlueprintDefinition)
-
-PlutusTx.makeLift ''ClientDatum
-PlutusTx.makeIsDataSchemaIndexed ''ClientDatum [('ClientDatum, 0)]
-
 clientTypedValidator ::
     ClientParams ->
-    ClientDatum ->
+    () ->
     ClientRedeemer ->
     ScriptContext ->
     Bool
-clientTypedValidator params clientDatum redeemer ctx@(ScriptContext txInfo _) =
+clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     PlutusTx.and conditions
   where
     conditions :: [Bool]
@@ -289,11 +279,9 @@ hashConcat (DataHash leftHash) (DataHash rightHash) =
 -- The main function to validate the Merkle proof
 merkleProofNFTHashValid :: DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
 merkleProofNFTHashValid (DataHash nftDataHash) dataHash (SimplifiedMerkleProof leftHash rightHash) =
-    let
-        hashedConcat = hashConcat leftHash rightHash
-    in
-        hashedConcat PlutusTx.== nftDataHash PlutusTx.&&
-        (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
+  let hashedConcat = hashConcat leftHash rightHash in
+    hashedConcat PlutusTx.== nftDataHash PlutusTx.&&
+    (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
 
 -- BLOCK2
 -- AuctionValidator.hs
