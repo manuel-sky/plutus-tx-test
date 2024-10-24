@@ -50,16 +50,6 @@ import PlutusTx.Builtins (BuiltinByteString, equalsByteString, lessThanInteger,
 
 --- CORE DATA TYPES
 
--- Hash that must be signed by each data operator
-data TopHash = TopHash PlutusTx.BuiltinByteString
-  deriving stock (Generic)
-  deriving anyclass (HasBlueprintDefinition)
-
-instance Eq TopHash where
-    (TopHash th1) == (TopHash th2) = equalsByteString th1 th2
-instance PlutusTx.Eq TopHash where
-    (TopHash th1) == (TopHash th2) = equalsByteString th1 th2
-
 -- Hash of the storage trie
 data DataHash = DataHash PlutusTx.BuiltinByteString
   deriving stock (Generic)
@@ -95,13 +85,11 @@ data MultiSig = MultiSig [SingleSig]
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
 
-PlutusTx.makeIsDataSchemaIndexed ''TopHash [('TopHash, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''DataHash [('DataHash, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''PubKey [('PubKey, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''MultiSigPubKey [('MultiSigPubKey, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''SingleSig [('SingleSig, 0)]
 PlutusTx.makeIsDataSchemaIndexed ''MultiSig [('MultiSig, 0)]
-PlutusTx.makeLift ''TopHash
 PlutusTx.makeLift ''DataHash
 PlutusTx.makeLift ''PubKey
 PlutusTx.makeLift ''MultiSigPubKey
@@ -110,7 +98,7 @@ PlutusTx.makeLift ''MultiSig
 
 -- Data stored in the bridge NFT UTXO's datum
 data BridgeNFTDatum = BridgeNFTDatum
-  { top_hash :: TopHash
+  { top_hash :: DataHash
   , data_hash :: DataHash
   }
 
@@ -135,7 +123,7 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
 data BridgeRedeemer = UpdateBridge
   { bridge_committee :: MultiSigPubKey
   , bridge_old_data_hash :: DataHash
-  , bridge_new_top_hash :: TopHash
+  , bridge_new_top_hash :: DataHash
   , bridge_new_data_hash :: DataHash
   , bridge_sig :: MultiSig -- signature over new_top_hash
   }
@@ -226,18 +214,18 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
 
     -- The NFT UTXO's datum must match the new values for the root hashes
-    nftUpdated :: TopHash -> DataHash -> Bool
+    nftUpdated :: DataHash -> DataHash -> Bool
     nftUpdated newTopHash newDataHash =
       bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash newDataHash)
 
 -- Function that checks if a SingleSig is valid
-singleSigValid :: PubKey -> TopHash -> SingleSig -> Bool
-singleSigValid (PubKey pubKey) (TopHash challenge) (SingleSig sig) =
+singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
+singleSigValid (PubKey pubKey) (DataHash challenge) (SingleSig sig) =
   verifyEd25519Signature pubKey challenge sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
 -- (Currently enforces that there's only one signature in the multisig for simplicity.)
-multiSigValid :: MultiSigPubKey -> TopHash -> MultiSig -> Bool
+multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
 multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
   singleSigValid pubKey challenge singleSig
 
