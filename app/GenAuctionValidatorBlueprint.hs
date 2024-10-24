@@ -41,7 +41,7 @@ clientParams :: ClientParams
 clientParams =
   ClientParams
     { bounty_nft_policy_id = nft_currency_symbol
-    , bounty_data_hash = old_data_hash
+    , bounty_target_hash = old_data_hash
     }
 
 bridgeParams :: BridgeParams

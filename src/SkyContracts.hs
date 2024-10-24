@@ -244,7 +244,7 @@ PlutusTx.makeIsDataSchemaIndexed ''SimplifiedMerkleProof [('SimplifiedMerkleProo
 -- Main parameters / initialization for client contract
 data ClientParams = ClientParams
   { bounty_nft_policy_id :: CurrencySymbol -- Unique currency symbol (hash of minting policy) of the bridge contract NFT
-  , bounty_data_hash :: DataHash -- Hash of data that must be present in storage trie
+  , bounty_target_hash :: DataHash -- Hash of data that must be present in storage trie
   }
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
@@ -275,15 +275,15 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     conditions = case redeemer of
         ClaimBounty proof ->
             [
-              merkleProofValid ctx (bounty_nft_policy_id params) (bounty_data_hash params) proof
+              merkleProofValid ctx (bounty_nft_policy_id params) (bounty_target_hash params) proof
             ]
 
 -- Verify that merkle proof is valid in the script context
 merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofValid ctx csym hash proof =
+merkleProofValid ctx csym targetHash proof =
   case getBridgeNFTDatumFromContext csym ctx of
     Nothing -> False
-    Just (BridgeNFTDatum _ nftDataHash) -> merkleProofNFTHashValid nftDataHash hash proof
+    Just (BridgeNFTDatum _ nftDataHash) -> merkleProofNFTHashValid nftDataHash targetHash proof
 
 -- Hashes a merkle proof to produce the root data hash
 merkleProofToDataHash :: SimplifiedMerkleProof -> BuiltinByteString
@@ -292,12 +292,12 @@ merkleProofToDataHash (SimplifiedMerkleProof (DataHash leftHash) (DataHash right
 
 -- The main function to validate the Merkle proof against the root data hash stored in the NFT:
 -- Check that the merkle proof hashes to the root data hash, and either its left or right child
--- is the target data hash.
+-- is the bounty's target data hash.
 merkleProofNFTHashValid :: DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
-merkleProofNFTHashValid (DataHash nftDataHash) dataHash proof@(SimplifiedMerkleProof leftHash rightHash) =
+merkleProofNFTHashValid (DataHash nftDataHash) targetHash proof@(SimplifiedMerkleProof leftHash rightHash) =
   let merkleDataHash = merkleProofToDataHash proof in
     merkleDataHash PlutusTx.== nftDataHash PlutusTx.&&
-    (dataHash PlutusTx.== leftHash PlutusTx.|| dataHash PlutusTx.== rightHash)
+    (targetHash PlutusTx.== leftHash PlutusTx.|| targetHash PlutusTx.== rightHash)
 
 {-# INLINEABLE clientUntypedValidator #-}
 clientUntypedValidator :: ClientParams -> BuiltinData -> BuiltinData -> BuiltinData -> PlutusTx.BuiltinUnit
