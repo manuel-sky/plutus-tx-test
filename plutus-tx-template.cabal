@@ -53,3 +53,5 @@ executable gen-minting-policy-blueprint
     , plutus-tx ^>=1.34.1.0
     , plutus-tx-plugin ^>=1.34.1.0
     , scripts
+    , hex-text ^>=0.1.0.9
+    , text ^>=2.0.2

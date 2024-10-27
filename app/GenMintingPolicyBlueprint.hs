@@ -21,16 +21,23 @@ module Main where
 import SkyMintingPolicy
 import Data.ByteString.Short qualified as Short
 import Data.Set qualified as Set
-import PlutusLedgerApi.Common (serialiseCompiledCode)
+import PlutusLedgerApi.Common (serialiseCompiledCode, BuiltinByteString, toBuiltin)
 import PlutusTx.Blueprint
 import System.Environment (getArgs)
+import Text.Hex (Text, ByteString, decodeHex)
+import Data.Maybe (fromJust)
+import PlutusLedgerApi.V1.Crypto (PubKeyHash(..))
+import Data.Text (pack)
 
-myContractBlueprint :: ContractBlueprint
-myContractBlueprint =
+hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
+hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
+
+myContractBlueprint :: String -> ContractBlueprint
+myContractBlueprint seller_pkh =
   MkContractBlueprint
     { contractId = Just "sky-minting-policy"
     , contractPreamble = myPreamble
-    , contractValidators = Set.singleton myValidator
+    , contractValidators = Set.singleton (myValidator seller_pkh)
     , contractDefinitions = deriveDefinitions @[SkyMintingParams, ()]
     }
 
@@ -44,8 +51,8 @@ myPreamble =
     , preambleLicense = Just "MIT"
     }
 
-myValidator :: ValidatorBlueprint referencedTypes
-myValidator =
+myValidator :: String -> ValidatorBlueprint referencedTypes
+myValidator seller_pkh =
   MkValidatorBlueprint
     { validatorTitle = "Sky Minting Validator"
     , validatorDescription = Just "A simple minting validator"
@@ -66,16 +73,16 @@ myValidator =
           }
     , validatorDatum = Nothing
     , validatorCompiled = do
-        let script = skyMintingPolicyScript "02deaad4104ff4846f22cbdf0321f98d485bf2b407b0fe745f9aa4d3"
+        let script = skyMintingPolicyScript (PubKeyHash (fromJust (hexStringToBuiltinByteString (pack seller_pkh))))
         let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
-writeBlueprintToFile :: FilePath -> IO ()
-writeBlueprintToFile path = writeBlueprint path myContractBlueprint
+writeBlueprintToFile :: String -> FilePath -> IO ()
+writeBlueprintToFile seller_pkh path = writeBlueprint path (myContractBlueprint seller_pkh)
 
 main :: IO ()
 main =
   getArgs >>= \case
-    [arg] -> writeBlueprintToFile arg
-    args -> fail $ "Expects one argument, got " <> show (length args)
+    [seller_pkh, path] -> writeBlueprintToFile seller_pkh path
+    args -> fail $ "Expects 2 arguments, seller_pkh and path, got: " <> show (length args)

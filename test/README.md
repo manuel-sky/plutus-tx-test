@@ -48,3 +48,7 @@ Send funds to the admin address.
 node send-lovelace.mjs var/offerer
 node send-lovelace.mjs var/claimant
 ```
+
+## Mint token
+
+cabal run gen-minting-policy-blueprint -- "$(cat var/admin.pkh)" var/sky-minting-policy.json
