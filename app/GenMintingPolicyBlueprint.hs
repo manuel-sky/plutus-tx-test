@@ -18,7 +18,7 @@
 
 module Main where
 
-import AuctionMintingPolicy
+import SkyMintingPolicy
 import Data.ByteString.Short qualified as Short
 import Data.Set qualified as Set
 import PlutusLedgerApi.Common (serialiseCompiledCode)
@@ -28,16 +28,16 @@ import System.Environment (getArgs)
 myContractBlueprint :: ContractBlueprint
 myContractBlueprint =
   MkContractBlueprint
-    { contractId = Just "auction-minting-policy"
+    { contractId = Just "sky-minting-policy"
     , contractPreamble = myPreamble
     , contractValidators = Set.singleton myValidator
-    , contractDefinitions = deriveDefinitions @[AuctionMintingParams, ()]
+    , contractDefinitions = deriveDefinitions @[SkyMintingParams, ()]
     }
 
 myPreamble :: Preamble
 myPreamble =
   MkPreamble
-    { preambleTitle = "Auction Minting Policy"
+    { preambleTitle = "Sky Minting Policy"
     , preambleDescription = Just "A simple minting policy"
     , preambleVersion = "1.0.0"
     , preamblePlutusVersion = PlutusV2
@@ -47,14 +47,14 @@ myPreamble =
 myValidator :: ValidatorBlueprint referencedTypes
 myValidator =
   MkValidatorBlueprint
-    { validatorTitle = "Auction Minting Validator"
+    { validatorTitle = "Sky Minting Validator"
     , validatorDescription = Just "A simple minting validator"
     , validatorParameters =
         [ MkParameterBlueprint
             { parameterTitle = Just "Minting Validator Parameters"
             , parameterDescription = Just "Compile-time validator parameters"
             , parameterPurpose = Set.singleton Mint
-            , parameterSchema = definitionRef @AuctionMintingParams
+            , parameterSchema = definitionRef @SkyMintingParams
             }
         ]
     , validatorRedeemer =
@@ -65,9 +65,9 @@ myValidator =
           , argumentSchema = definitionRef @()
           }
     , validatorDatum = Nothing
-    , validatorCompiled = do 
-        let script = auctionMintingPolicyScript "02deaad4104ff4846f22cbdf0321f98d485bf2b407b0fe745f9aa4d3"
-        let code = Short.fromShort (serialiseCompiledCode script) 
+    , validatorCompiled = do
+        let script = skyMintingPolicyScript "02deaad4104ff4846f22cbdf0321f98d485bf2b407b0fe745f9aa4d3"
+        let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
