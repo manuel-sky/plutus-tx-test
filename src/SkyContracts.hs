@@ -102,6 +102,8 @@ PlutusTx.makeLift ''MultiSig
 data BridgeNFTDatum = BridgeNFTDatum
   { bridgeNFTTopHash :: DataHash
   }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
 
 instance Eq BridgeNFTDatum where
   (BridgeNFTDatum th1) == (BridgeNFTDatum th2) = th1 == th2
@@ -116,6 +118,8 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
 data BridgeParams = BridgeParams
   { bridgeNFTCurrencySymbol :: CurrencySymbol
   }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''BridgeParams
 PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
@@ -127,6 +131,8 @@ data BridgeRedeemer = UpdateBridge
   , bridgeNewTopHash :: DataHash
   , bridgeSig :: MultiSig -- signature over new top hash
   }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''BridgeRedeemer
 PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]

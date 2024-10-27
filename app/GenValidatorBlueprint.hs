@@ -29,57 +29,47 @@ import PlutusTx.Builtins.HasOpaque (stringToBuiltinByteString)
 import Text.Hex (Text, ByteString, decodeHex)
 import PlutusTx.Builtins (toBuiltin, fromBuiltin, BuiltinByteString)
 import PlutusLedgerApi.V2 (CurrencySymbol(..))
+import Data.Text (pack)
 
 hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
 hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
 
-pub1 = PubKey (fromJust (hexStringToBuiltinByteString "43004B8F43FAF0E3EAAAF55BB41DC53CBF09E42884267BAF8C1EA6903819122C"))
-nftCurrencySymbol = CurrencySymbol (fromJust (hexStringToBuiltinByteString "0A271556EB6FEFCE323D3CAC4C4E53CAE78E3DC9"))
-oldDataHash = DataHash (fromJust (hexStringToBuiltinByteString "55203019b1efae67e2b9b577ce5f881b8367f377"))
-
-clientParams :: ClientParams
-clientParams =
-  ClientParams
-    { bountyNFTCurrencySymbol = nftCurrencySymbol
-    , bountyTargetHash = oldDataHash
-    }
-
-bridgeParams :: BridgeParams
-bridgeParams =
+bridgeParams :: CurrencySymbol -> BridgeParams
+bridgeParams csym =
   BridgeParams
-    { bridgeNFTCurrencySymbol = nftCurrencySymbol
+    { bridgeNFTCurrencySymbol = csym
     }
 
-clientContractBlueprint :: ContractBlueprint
-clientContractBlueprint =
+bridgeContractBlueprint :: CurrencySymbol -> ContractBlueprint
+bridgeContractBlueprint csym =
   MkContractBlueprint
-    { contractId = Just "client-validator"
-    , contractPreamble = clientPreamble
-    , contractValidators = Set.singleton myClientValidator
-    , contractDefinitions = deriveDefinitions @[ClientParams, ClientRedeemer]
+    { contractId = Just "bridge-validator"
+    , contractPreamble = bridgePreamble
+    , contractValidators = Set.singleton (myBridgeValidator csym)
+    , contractDefinitions = deriveDefinitions @[BridgeParams, BridgeRedeemer]
     }
 
-clientPreamble :: Preamble
-clientPreamble =
+bridgePreamble :: Preamble
+bridgePreamble =
   MkPreamble
-    { preambleTitle = "Client Validator"
+    { preambleTitle = "Bridge Validator"
     , preambleDescription = Just "Blueprint for a Plutus script validating auction transactions"
     , preambleVersion = "1.0.0"
     , preamblePlutusVersion = PlutusV2
     , preambleLicense = Just "MIT"
     }
 
-myClientValidator :: ValidatorBlueprint referencedTypes
-myClientValidator =
+myBridgeValidator :: CurrencySymbol -> ValidatorBlueprint referencedTypes
+myBridgeValidator csym =
   MkValidatorBlueprint
-    { validatorTitle = "Client Validator"
+    { validatorTitle = "Bridge Validator"
     , validatorDescription = Just "Plutus script validating auction transactions"
     , validatorParameters =
         [ MkParameterBlueprint
             { parameterTitle = Just "Parameters"
             , parameterDescription = Just "Compile-time validator parameters"
             , parameterPurpose = Set.singleton Spend
-            , parameterSchema = definitionRef @ClientParams
+            , parameterSchema = definitionRef @BridgeParams
             }
         ]
     , validatorRedeemer =
@@ -87,20 +77,20 @@ myClientValidator =
           { argumentTitle = Just "Redeemer"
           , argumentDescription = Just "Redeemer for the auction validator"
           , argumentPurpose = Set.fromList [Spend]
-          , argumentSchema = definitionRef @ClientRedeemer
+          , argumentSchema = definitionRef @BridgeRedeemer
           }
     , validatorDatum = Nothing
     , validatorCompiled = do
-        let script = clientValidatorScript clientParams
+        let script = bridgeValidatorScript (bridgeParams csym)
         let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
-writeBlueprintToFile :: FilePath -> IO ()
-writeBlueprintToFile path = writeBlueprint path clientContractBlueprint
+writeBlueprintToFile :: CurrencySymbol -> FilePath -> IO ()
+writeBlueprintToFile csym path = writeBlueprint path (bridgeContractBlueprint csym)
 
 main :: IO ()
 main =
   getArgs >>= \case
-    [arg] -> writeBlueprintToFile arg
-    args -> fail $ "Expects one argument, got " <> show (length args)
+    [csym, path] -> writeBlueprintToFile (CurrencySymbol (fromJust (hexStringToBuiltinByteString (pack csym)))) path
+    args -> fail $ "Expects 2 argument, currency symbol and path, got " <> show (length args)

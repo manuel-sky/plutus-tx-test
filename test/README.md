@@ -62,8 +62,8 @@ cabal run gen-minting-policy-blueprint -- "$(cat var/admin.pkh)" var/sky-minting
 cat var/sky-minting-policy.json | jq -r '.validators[0].hash' > var/sky-minting-policy.hash
 ```
 
-## Write timestamp 24h in the future
+## Generate Bridge Validator
 
 ```
-echo $(( $(date +%s%3N) + 86400000 )) > var/timestamp
+cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bridge-validator.json
 ```
