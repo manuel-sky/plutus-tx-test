@@ -5,6 +5,7 @@ Inside the `test` directory:
 ## Install deps
 
 ```
+sudo apt-get install jq
 npm install
 ```
 
@@ -49,6 +50,20 @@ node send-lovelace.mjs var/offerer
 node send-lovelace.mjs var/claimant
 ```
 
-## Mint token
+## Create NFT minting policy
 
+```
 cabal run gen-minting-policy-blueprint -- "$(cat var/admin.pkh)" var/sky-minting-policy.json
+```
+
+## Extract minting policy hash
+
+```
+cat var/sky-minting-policy.json | jq -r '.validators[0].hash' > var/sky-minting-policy.hash
+```
+
+## Write timestamp 24h in the future
+
+```
+echo $(( $(date +%s%3N) + 86400000 )) > var/timestamp
+```
