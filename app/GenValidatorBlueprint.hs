@@ -46,7 +46,7 @@ bridgeContractBlueprint csym =
     { contractId = Just "bridge-validator"
     , contractPreamble = bridgePreamble
     , contractValidators = Set.singleton (myBridgeValidator csym)
-    , contractDefinitions = deriveDefinitions @[BridgeParams, BridgeRedeemer]
+    , contractDefinitions = deriveDefinitions @[BridgeParams, BridgeRedeemer, BridgeNFTDatum]
     }
 
 bridgePreamble :: Preamble
