@@ -4,3 +4,4 @@ validator.uplc
 cabal.project.freeze
 result
 off-chain
+*~
