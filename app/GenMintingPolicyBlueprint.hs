@@ -33,11 +33,11 @@ hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
 hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
 
 myContractBlueprint :: String -> ContractBlueprint
-myContractBlueprint seller_pkh =
+myContractBlueprint admin_pkh =
   MkContractBlueprint
     { contractId = Just "sky-minting-policy"
     , contractPreamble = myPreamble
-    , contractValidators = Set.singleton (myValidator seller_pkh)
+    , contractValidators = Set.singleton (myValidator admin_pkh)
     , contractDefinitions = deriveDefinitions @[SkyMintingParams, ()]
     }
 
@@ -52,7 +52,7 @@ myPreamble =
     }
 
 myValidator :: String -> ValidatorBlueprint referencedTypes
-myValidator seller_pkh =
+myValidator admin_pkh =
   MkValidatorBlueprint
     { validatorTitle = "Sky Minting Validator"
     , validatorDescription = Just "A simple minting validator"
@@ -73,16 +73,16 @@ myValidator seller_pkh =
           }
     , validatorDatum = Nothing
     , validatorCompiled = do
-        let script = skyMintingPolicyScript (PubKeyHash (fromJust (hexStringToBuiltinByteString (pack seller_pkh))))
+        let script = skyMintingPolicyScript (PubKeyHash (fromJust (hexStringToBuiltinByteString (pack admin_pkh))))
         let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
 writeBlueprintToFile :: String -> FilePath -> IO ()
-writeBlueprintToFile seller_pkh path = writeBlueprint path (myContractBlueprint seller_pkh)
+writeBlueprintToFile admin_pkh path = writeBlueprint path (myContractBlueprint admin_pkh)
 
 main :: IO ()
 main =
   getArgs >>= \case
-    [seller_pkh, path] -> writeBlueprintToFile seller_pkh path
-    args -> fail $ "Expects 2 arguments, seller_pkh and path, got: " <> show (length args)
+    [admin_pkh, path] -> writeBlueprintToFile admin_pkh path
+    args -> fail $ "Expects 2 arguments, admin_pkh and path, got: " <> show (length args)
