@@ -19,6 +19,8 @@ mkdir var
 
 ## Generate keys for admin as well as bounty offerer and claimant
 
+We use the link:generate-keys.mjs[] script to generate addresses (e.g. link:var/admin.addr[]), pubkey hashes (e.g. link:var/admin.pkh[]), and private keys (e.g. link:var/admin.skey[]) for an admin, a bounty offerer, and a bounty claimant.
+
 ```
 node generate-keys.mjs var/admin
 node generate-keys.mjs var/offerer
