@@ -66,11 +66,15 @@ cabal run gen-minting-policy-blueprint -- "$(cat var/admin.pkh)" var/sky-minting
 
 ## Extract minting policy hash
 
+Use jq to extract the minting policy hash from the policy file and write it into link:var/sky-minting-policy.hash[].
+
 ```
 cat var/sky-minting-policy.json | jq -r '.validators[0].hash' > var/sky-minting-policy.hash
 ```
 
 ## Generate Bridge Validator
+
+Supply the minting policy hash from link:var/sky-minting-policy.hash[] as argument to the link:../app/GenValidatorBlueprint.hs[] command in order to produce the link:var/sky-bridge-validator.json[] Blueprint JSON for the validator.
 
 ```
 cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bridge-validator.json
@@ -78,12 +82,12 @@ cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sk
 
 ## Mint the NFT at the bridge's address
 
-We use the link:mint-nft.mjs[] script to mint the NFT.
+Now that we have the validator script in link:var/sky-bridge-validator.json[], we can mint the NFT and lock it at the address of the validator with the link:mint-nft.mjs[] script. 
 
 ```
 node mint-nft.mjs
 ```
 
-Address on Preview testnet can be viewed here:
+The NFT locked at the address on the Preview testnet can be viewed here:
 
 https://preview.cardanoscan.io/tokenHoldings/addr_test1wqvwnk2mcdx92f9grcahrqcx47r0zk3vgrnw02mdqzclmsq8lfgue
