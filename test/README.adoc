@@ -29,7 +29,7 @@ node generate-keys.mjs var/claimant
 
 ## Set up Blockfrost provider
 
-Replace YOUR_BLOCKFROST_API_KEY and call the following command:
+Replace YOUR_BLOCKFROST_API_KEY and call the following command to create link:var/blockfrost.api-key[].
 
 ```
 echo YOUR_BLOCKFROST_API_KEY > var/blockfrost.api-key
