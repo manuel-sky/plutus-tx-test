@@ -18,53 +18,68 @@
 
 module Main where
 
-import AuctionValidator
+import SkyContracts
 import Data.ByteString.Short qualified as Short
 import Data.Set qualified as Set
 import PlutusLedgerApi.Common (serialiseCompiledCode)
 import PlutusTx.Blueprint
 import System.Environment (getArgs)
+import Data.Maybe (fromJust)
+import PlutusTx.Builtins.HasOpaque (stringToBuiltinByteString)
+import Text.Hex (Text, ByteString, decodeHex)
+import PlutusTx.Builtins (toBuiltin, fromBuiltin, BuiltinByteString)
+import PlutusLedgerApi.V2 (CurrencySymbol(..))
 
-auctionParams :: AuctionParams
-auctionParams =
-  AuctionParams
-    { apSeller = error "Replace with seller public key hash"
-    , apCurrencySymbol = error "Replace with currency symbol"
-    , apTokenName = "TokenToBeAuctioned"
-    , apMinBid = 100
-    , apEndTime = error "Replace with the auction's end time"
+hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
+hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
+
+pub1 = PubKey (fromJust (hexStringToBuiltinByteString "43004B8F43FAF0E3EAAAF55BB41DC53CBF09E42884267BAF8C1EA6903819122C"))
+nftCurrencySymbol = CurrencySymbol (fromJust (hexStringToBuiltinByteString "0A271556EB6FEFCE323D3CAC4C4E53CAE78E3DC9"))
+oldDataHash = DataHash (fromJust (hexStringToBuiltinByteString "55203019b1efae67e2b9b577ce5f881b8367f377"))
+
+clientParams :: ClientParams
+clientParams =
+  ClientParams
+    { bountyNFTCurrencySymbol = nftCurrencySymbol
+    , bountyTargetHash = oldDataHash
     }
 
-myContractBlueprint :: ContractBlueprint
-myContractBlueprint =
+bridgeParams :: BridgeParams
+bridgeParams =
+  BridgeParams
+    { bridgeNFTCurrencySymbol = nftCurrencySymbol
+    }
+
+clientContractBlueprint :: ContractBlueprint
+clientContractBlueprint =
   MkContractBlueprint
-    { contractId = Just "auction-validator"
-    , contractPreamble = myPreamble
-    , contractValidators = Set.singleton myValidator
-    , contractDefinitions = deriveDefinitions @[AuctionParams, AuctionDatum, AuctionRedeemer]
+    { contractId = Just "client-validator"
+    , contractPreamble = clientPreamble
+    , contractValidators = Set.singleton myClientValidator
+    , contractDefinitions = deriveDefinitions @[ClientParams, ClientRedeemer]
     }
 
-myPreamble :: Preamble
-myPreamble =
+clientPreamble :: Preamble
+clientPreamble =
   MkPreamble
-    { preambleTitle = "Auction Validator"
+    { preambleTitle = "Client Validator"
     , preambleDescription = Just "Blueprint for a Plutus script validating auction transactions"
     , preambleVersion = "1.0.0"
     , preamblePlutusVersion = PlutusV2
     , preambleLicense = Just "MIT"
     }
 
-myValidator :: ValidatorBlueprint referencedTypes
-myValidator =
+myClientValidator :: ValidatorBlueprint referencedTypes
+myClientValidator =
   MkValidatorBlueprint
-    { validatorTitle = "Auction Validator"
+    { validatorTitle = "Client Validator"
     , validatorDescription = Just "Plutus script validating auction transactions"
     , validatorParameters =
         [ MkParameterBlueprint
             { parameterTitle = Just "Parameters"
             , parameterDescription = Just "Compile-time validator parameters"
             , parameterPurpose = Set.singleton Spend
-            , parameterSchema = definitionRef @AuctionParams
+            , parameterSchema = definitionRef @ClientParams
             }
         ]
     , validatorRedeemer =
@@ -72,17 +87,17 @@ myValidator =
           { argumentTitle = Just "Redeemer"
           , argumentDescription = Just "Redeemer for the auction validator"
           , argumentPurpose = Set.fromList [Spend]
-          , argumentSchema = definitionRef @()
+          , argumentSchema = definitionRef @ClientRedeemer
           }
     , validatorDatum = Nothing
     , validatorCompiled = do
-        let script = auctionValidatorScript auctionParams
-        let code = Short.fromShort (serialiseCompiledCode script) 
+        let script = clientValidatorScript clientParams
+        let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
 writeBlueprintToFile :: FilePath -> IO ()
-writeBlueprintToFile path = writeBlueprint path myContractBlueprint
+writeBlueprintToFile path = writeBlueprint path clientContractBlueprint
 
 main :: IO ()
 main =

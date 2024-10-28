@@ -66,7 +66,7 @@ myValidator =
           }
     , validatorDatum = Nothing
     , validatorCompiled = do 
-        let script = auctionMintingPolicyScript (error "Replace with seller public key hash")
+        let script = auctionMintingPolicyScript "02deaad4104ff4846f22cbdf0321f98d485bf2b407b0fe745f9aa4d3"
         let code = Short.fromShort (serialiseCompiledCode script) 
         Just (compiledValidator PlutusV2 code)
     }
