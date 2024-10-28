@@ -53,7 +53,7 @@ node send-lovelace.mjs var/claimant
 ## Create NFT minting policy
 
 ```
-cabal run gen-minting-policy-blueprint -- "$(cat var/admin.pkh)" var/sky-minting-policy.json
+cabal run gen-minting-policy-blueprint -- "$(cat var/offerer.pkh)" var/sky-minting-policy.json
 ```
 
 ## Extract minting policy hash
@@ -67,3 +67,6 @@ cat var/sky-minting-policy.json | jq -r '.validators[0].hash' > var/sky-minting-
 ```
 cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bridge-validator.json
 ```
+
+Minted a token at address addr_test1wqvwnk2mcdx92f9grcahrqcx47r0zk3vgrnw02mdqzclmsq8lfgue.
+Tx hash: 24f69d3fc547a8b1005964917e9e77b904d22dc7d3dc54ff19dc611bab9a5c65
