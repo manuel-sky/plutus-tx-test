@@ -1,6 +1,8 @@
 # Testing the contracts
 
-Inside the `test` directory:
+## Overview
+
+This document describes the process to generate wallets for admin, offerer, and claimant; distribute some testnet Ada to the wallets to pay fees; create the minting policy for our bridge NFT; create the bridge validator script; mint the NFT and lock it at the bridge's address.
 
 ## Install deps
 
