@@ -60,7 +60,7 @@ node send-lovelace.mjs var/claimant
 
 ## Create NFT minting policy
 
-Supplies the admin's public key hash as input to the link:../app/GenMintingPolicyBlueprint.hs[] command to produce the link:var/sky-minting-policy.json[] minting policy Blueprint JSON.
+Supplies the admin's public key hash as input to the link:../app/GenMintingPolicyBlueprint.hs[] command to produce the link:var/sky-minting-policy.json[] minting policy Blueprint JSON from link:../src/SkyMintingPolicy.hs[].
 
 ```
 cabal run gen-minting-policy-blueprint -- "$(cat var/admin.pkh)" var/sky-minting-policy.json
@@ -76,7 +76,7 @@ cat var/sky-minting-policy.json | jq -r '.validators[0].hash' > var/sky-minting-
 
 ## Generate Bridge Validator
 
-Supply the minting policy hash from link:var/sky-minting-policy.hash[] as argument to the link:../app/GenValidatorBlueprint.hs[] command in order to produce the link:var/sky-bridge-validator.json[] Blueprint JSON for the validator.
+Supply the minting policy hash from link:var/sky-minting-policy.hash[] as argument to the link:../app/GenValidatorBlueprint.hs[] command in order to produce the link:var/sky-bridge-validator.json[] Blueprint JSON for the validator from link:../src/SkyContracts.hs[].
 
 ```
 cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bridge-validator.json
