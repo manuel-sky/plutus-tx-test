@@ -37,7 +37,7 @@ echo YOUR_BLOCKFROST_API_KEY > var/blockfrost.api-key
 
 ## Get funds from testnet faucet
 
-Get the admin's address:
+Get the admin's address from link:var/admin.addr[]:
 
 ```
 cat var/admin.addr
@@ -48,6 +48,8 @@ Go to https://docs.cardano.org/cardano-testnets/tools/faucet/
 Send funds to the admin address.
 
 ## Distribute some Ada to bounty offerer and claimant
+
+We use the link:send-lovelace.mjs[] script to send some Ada for paying fees to the bounty offerer and claimant.
 
 ```
 node send-lovelace.mjs var/offerer
