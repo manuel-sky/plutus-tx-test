@@ -58,6 +58,8 @@ node send-lovelace.mjs var/claimant
 
 ## Create NFT minting policy
 
+Supplies the offerer's public key hash as input to the link:../app/GenMintingPolicy.hs[] command to produce the link:var/sky-minting-policy.json[] minting policy Blueprint JSON.
+
 ```
 cabal run gen-minting-policy-blueprint -- "$(cat var/offerer.pkh)" var/sky-minting-policy.json
 ```
