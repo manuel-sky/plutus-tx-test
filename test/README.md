@@ -11,6 +11,8 @@ npm install
 
 ## Create directory for application data
 
+We use the [](var) directory to store application data.  In this repo, it is checked in for demonstration purposes.
+
 ```
 mkdir var
 ```
