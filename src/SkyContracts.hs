@@ -226,14 +226,14 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 
 -- Function that checks if a SingleSig is valid
 singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
-singleSigValid (PubKey pubKey) (DataHash challenge) (SingleSig sig) =
-  verifyEd25519Signature pubKey challenge sig
+singleSigValid (PubKey pubKey) (DataHash topHash) (SingleSig sig) =
+  verifyEd25519Signature pubKey topHash sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
 -- (Currently enforces that there's only one signature in the multisig for simplicity.)
 multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
-multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
-  singleSigValid pubKey challenge singleSig
+multiSigValid (MultiSigPubKey [pubKey] _) topHash (MultiSig [singleSig]) =
+  singleSigValid pubKey topHash singleSig
 
 --- CLIENT CONTRACT
 
