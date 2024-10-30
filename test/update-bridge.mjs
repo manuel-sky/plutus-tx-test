@@ -2,6 +2,7 @@ import cbor from 'cbor'
 import {
     BlockfrostProvider,
     MeshWallet,
+    MeshTxBuilder,
     Transaction,
     serializePlutusScript,
     conStr,
@@ -47,12 +48,23 @@ const validator = {
 
 const validatorAddress = serializePlutusScript(validator).address
 
+function mkDataHash(hex) { return { alternative: 0, fields: [hex] } }
+function mkPubKey(hash) { return { alternative: 0, fields: [hash] } }
+
 // Create MultiSigPubKey
-const publicKey = {
+const msPublicKey = {
     alternative: 0,
     fields: [
-	[publicKeyHex], // List of public keys in signatures
+	[mkPubKey(mkDataHash(publicKeyHex))], // List of public keys in signatures
 	1 // Number of public keys that must sign
+    ]
+}
+
+const ms = {
+    alternative: 0,
+    fields: [
+	{ alternative: 0,
+	  fields: [ mkDataHash(sigHex) ] }
     ]
 }
 
@@ -60,16 +72,22 @@ const publicKey = {
 const redeemer = {
     alternative: 0,
     fields: [
-	publicKey,
-	oldDataHashHex,
-	newTopHashHex,
-	sigHex
+	msPublicKey,
+	mkDataHash(oldDataHashHex),
+	mkDataHash(newTopHashHex),
+	ms
     ]
 }
+
+console.log(JSON.stringify(redeemer, null, 2))
 
 const utxos = await blockchainProvider.fetchAddressUTxOs(validatorAddress);
 // XXX hack, we need to actually look for the NFT, for now utilize fact that there's always only a single UTXO
 const utxo = utxos[0];
+
+console.log(utxo);
+console.log(utxo.output.amount[0]);
+console.log(utxo.output.amount[1]);
 
 const updatedDatum = {
     alternative: 0,
@@ -80,12 +98,27 @@ const updatedDatum = {
     ]
 };
 
-/*
-const tx = new Transaction({ initiator: wallet });
-tx.sendValue(recipient, UTxO);
+const recipient = {
+    address: validatorAddress,
+    datum: { value: updatedDatum, inline: true }
+};
+
+const walletUtxos = await wallet.getUtxos();
+const changeAddress = await wallet.getChangeAddress();
+
+const tx = new Transaction({ initiator: wallet, verbose: true })
+.redeemValue({
+    value: utxo,
+    script: validator,
+    redeemer: { data: redeemer }
+})
+.sendAssets(recipient, [{
+  unit: '986cd2ae41500694674dbc84e7e36044afb7104f315d0717e3d42e26536b79427269646765',
+  quantity: '1'
+}]);
 
 const unsignedTx = await tx.build();
 const signedTx = await wallet.signTx(unsignedTx);
 const txHash = await wallet.submitTx(signedTx);
 
-*/
+console.log(txHash)
