@@ -202,7 +202,9 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
               -- The NFT must be again included in the outputs
               outputHasNFT,
               -- The NFT's data must have been updated
-              nftUpdated newTopHash
+              nftUpdated newTopHash,
+              -- The hash of pair(multisig-hash, old-data-hash) must be = old-top-hash
+              -- TBD
             ]
 
     ownOutput :: TxOut
