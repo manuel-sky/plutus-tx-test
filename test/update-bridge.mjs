@@ -49,22 +49,24 @@ const validator = {
 const validatorAddress = serializePlutusScript(validator).address
 
 function mkDataHash(hex) { return { alternative: 0, fields: [hex] } }
-function mkPubKey(hash) { return { alternative: 0, fields: [hash] } }
+function mkPubKey(hex) { return { alternative: 0, fields: [hex] } }
 
 // Create MultiSigPubKey
 const msPublicKey = {
     alternative: 0,
     fields: [
-	[mkPubKey(mkDataHash(publicKeyHex))], // List of public keys in signatures
+	[ mkPubKey(publicKeyHex) ], // List of public keys in signatures
 	1 // Number of public keys that must sign
     ]
 }
 
+// MultiSig
 const ms = {
     alternative: 0,
     fields: [
-	{ alternative: 0,
-	  fields: [ mkDataHash(sigHex) ] }
+	// [SingleSig]
+	[ { alternative: 0,
+	    fields: [ sigHex ] } ]
     ]
 }
 
