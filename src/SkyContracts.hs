@@ -23,6 +23,9 @@
 {-# OPTIONS_GHC -fno-unbox-small-strict-fields #-}
 {-# OPTIONS_GHC -fno-unbox-strict-fields #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+-- Debugging
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:coverage-all #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:preserve-logging #-}
 
 -- Docs: https://gist.github.com/manuel-sky/0d74d55d3a7add98276d804e12461c68
 
@@ -142,7 +145,7 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]
 -- Function to find an input UTXO with a specific CurrencySymbol
 findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
 findInputByCurrencySymbol targetSymbol ctx =
-    let assetClass = AssetClass (targetSymbol, TokenName "")
+    let assetClass = AssetClass (targetSymbol, TokenName "SkyBridge")
         inputs = txInfoInputs $ scriptContextTxInfo ctx
         findSymbol :: TxInInfo -> Bool
         findSymbol txInInfo =
@@ -215,7 +218,7 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     -- There must be exactly one output UTXO with our NFT's unique currency symbol
     outputHasNFT :: Bool
     outputHasNFT =
-      let assetClass = (AssetClass ((bridgeNFTCurrencySymbol params), TokenName "")) in
+      let assetClass = (AssetClass ((bridgeNFTCurrencySymbol params), TokenName "SkyBridge")) in
       assetClassValueOf (txOutValue ownOutput) assetClass PlutusTx.== 1
 
     bridgeNFTDatum :: Maybe BridgeNFTDatum
