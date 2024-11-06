@@ -240,6 +240,11 @@ multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
 multiSigValid (MultiSigPubKey [pubKey] _) topHash (MultiSig [singleSig]) =
   singleSigValid pubKey topHash singleSig
 
+-- Create fingerprint of a multisig pubkey
+multiSigToDataHash :: MultiSigPubKey -> DataHash
+multiSigToDataHash (MultiSigPubKey [(PubKey pubKey)] _) =
+  DataHash (sha2_256 pubKey)
+
 --- CLIENT CONTRACT
 
 -- Trivial form of Merkle proof for a left and a right data hash -
