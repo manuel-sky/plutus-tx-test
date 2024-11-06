@@ -15,6 +15,8 @@ import cbor from 'cbor'
 
 import fs from 'node:fs'
 
+import { findUTXOWithSpecificUnit } from "./util.mjs"
+
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
@@ -59,8 +61,6 @@ const mintingPolicyHash = resolveScriptHash(
   mintingPolicy.version
 )
 
-console.log(validatorAddress)
-
 const utxos = await blockchainProvider.fetchAddressUTxOs(validatorAddress);
-
-console.log(utxos);
+const nft = findUTXOWithSpecificUnit(utxos, mintingPolicyHash + stringToHex('SkyBridge'))
+console.log(nft)

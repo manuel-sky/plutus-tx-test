@@ -15,6 +15,8 @@ import {
 
 import fs from 'node:fs'
 
+import { findUTXOWithSpecificUnit } from "./util.mjs"
+
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
@@ -104,13 +106,10 @@ const redeemer = {
 //console.log(JSON.stringify(redeemer, null, 2))
 
 const utxos = await blockchainProvider.fetchAddressUTxOs(validatorAddress);
-// XXX hack, we need to actually look for the NFT, for now utilize fact that there's always only a single UTXO
-const utxo = utxos[0];
+// The NFT
+const utxo = findUTXOWithSpecificUnit(utxos, mintingPolicyHash + stringToHex('SkyBridge'))
 
 console.log(utxo);
-console.log(utxo.output.amount[0]);
-console.log(utxo.output.amount[1]);
-console.log(mintingPolicyHash);
 
 const updatedDatum = {
     alternative: 0,
