@@ -122,11 +122,14 @@ c7fbd27ca6bd42121f4fc1ff6a961a75038bcdf589518693b37f93e6e8934456
 cabal run gen-bounty-blueprint -- "$(cat var/sky-minting-policy.hash)" 1111 var/sky-bounty-validator.json
 ```
 
-## Offer bounty for hash 1111
+## Offer bounty
 
 ```
 node offer-bounty.mjs
 ```
+
+bounty: addr_test1wzhgcuuc66c6r3stzu3a4v9pv82pg6v2yjtgezdrg9dtsxqmj9zxc
+tx: 43b56afee485f2c727cc65df4ca99c3023fd6452b839b03a4573f
 
 ## Claim bounty
 
