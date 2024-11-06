@@ -130,7 +130,7 @@ node offer-bounty.mjs
 ```
 
 bounty: addr_test1wzhgcuuc66c6r3stzu3a4v9pv82pg6v2yjtgezdrg9dtsxqmj9zxc
-tx: 43b56afee485f2c727cc65df4ca99c3023fd6452b839b03a4573f
+tx: af77b3cd538f7879e77af5f983a8e3586120263db0232f68a933fd9a6561c5ef
 
 ## Claim bounty
 

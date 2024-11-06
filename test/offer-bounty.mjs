@@ -11,7 +11,8 @@ import {
   Transaction,
   serializePlutusScript,
   conStr,
-  byteString
+  byteString,
+  mTuple
 } from '@meshsdk/core'
 
 import fs from 'node:fs'
@@ -44,15 +45,18 @@ const validator = {
 
 const validatorAddress = serializePlutusScript(validator).address
 
-const recipient = validatorAddress
+const recipient = {
+    address: validatorAddress,
+    datum: { value: [], inline: true } // TBD is this correct? Should be () in Haskell?
+}
 
-// Send 10 ada to bounty
-const unsignedTx = await new Transaction({ initiator: wallet })
-  .sendLovelace(recipient, '10000000')
+console.log(recipient)
+
+// Send 100 ada to bounty
+const unsignedTx = await new Transaction({ initiator: wallet, verbose: true })
+  .sendLovelace(recipient, '100000000')
   .build()
-
 const signedTx = await wallet.signTx(unsignedTx)
-
 const txHash = await wallet.submitTx(signedTx)
 
-console.log(`Ada sent. Recipient: ${recipient}, Tx hash: ${txHash}`)
+console.log(`Ada sent. Tx hash: ${txHash}`)
