@@ -110,7 +110,8 @@ node update-bridge.mjs $PUBLIC_KEY $NEW_TOP_HASH $SIG
 ## Generate Top Hash
 
 cabal run gen-top-hash F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405 0000 1111
-c7fbd27ca6bd42121f4fc1ff6a961a75038bcdf589518693b37f93e6e8934456
+tophash: c7fbd27ca6bd42121f4fc1ff6a961a75038bcdf589518693b37f93e6e8934456
+pubkeyhash: 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
 
 ## Sign it
 
@@ -134,5 +135,5 @@ tx: 43b56afee485f2c727cc65df4ca99c3023fd6452b839b03a4573f
 ## Claim bounty
 
 ```
-node claim-bounty.mjs 0000 1111 $multi_sig_hash
+node claim-bounty.mjs 0000 1111 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
 ```
