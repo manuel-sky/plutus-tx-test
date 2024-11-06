@@ -64,6 +64,8 @@ const mintingPolicyHash = resolveScriptHash(
 const bridgeUtxos = await blockchainProvider.fetchAddressUTxOs(validatorAddress);
 const nft = findUTXOWithSpecificUnit(bridgeUtxos, mintingPolicyHash + stringToHex('SkyBridge'))
 
+console.log(JSON.stringify(nft));
+
 const bountyBlueprint = JSON.parse(
   fs.readFileSync('./var/sky-bounty-validator.json')
 )
@@ -79,7 +81,7 @@ const bountyValidator = {
 
 const bountyAddress = serializePlutusScript(bountyValidator).address
 const bountyUtxos = await blockchainProvider.fetchAddressUTxOs(bountyAddress);
-const bountyUtxo = bountyUtxos[0] // TBD for now claim only one of the UTXOs at bounty
+const bountyUtxo = bountyUtxos[2] // TBD for now claim only one of the UTXOs at bounty
 console.log(JSON.stringify(bountyUtxo))
 
 // ClientRedeemer
