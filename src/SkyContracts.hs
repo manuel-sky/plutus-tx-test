@@ -146,7 +146,7 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]
 findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
 findInputByCurrencySymbol targetSymbol ctx =
     let assetClass = AssetClass (targetSymbol, TokenName "SkyBridge")
-        inputs = txInfoInputs $ scriptContextTxInfo ctx
+        inputs = txInfoReferenceInputs $ scriptContextTxInfo ctx
         findSymbol :: TxInInfo -> Bool
         findSymbol txInInfo =
           assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) assetClass PlutusTx.== 1
