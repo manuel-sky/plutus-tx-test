@@ -305,7 +305,7 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
 merkleProofValid ctx csym targetHash multiSigPubKeyHash proof =
   case getBridgeNFTDatumFromContext csym ctx of
-    Nothing -> False
+    Nothing -> PlutusTx.traceError "bridge NFT not found"
     Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigPubKeyHash proof
 
 -- Hashes the concatenation of a pair of hashes

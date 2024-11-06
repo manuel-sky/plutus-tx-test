@@ -115,3 +115,21 @@ c7fbd27ca6bd42121f4fc1ff6a961a75038bcdf589518693b37f93e6e8934456
 ## Sign it
 
 603456C8085568E54B20ABD11F7EAEC8AD731F61D0E3EA3BF8DEF43B72597F17AB4B0A26D952429B90EE8E8357E859D93E29E3DBAE53DEA51BCCD5B4CFB8E904
+
+## Generate Bounty Validator
+
+```
+cabal run gen-bounty-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bounty-validator.json
+```
+
+## Offer bounty for hash 1111
+
+```
+node offer-bounty.mjs $(cat var/sky-minting-policy.hash) 1111
+```
+
+## Claim bounty
+
+```
+node claim-bounty.mjs $(cat var/sky-minting-policy.hash) 0000 1111 $multi_sig_hash
+```
