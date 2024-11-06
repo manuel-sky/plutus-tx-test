@@ -24,9 +24,9 @@ const leftHex = process.argv[2]
 const rightHex = process.argv[3]
 const multiSigPubKeyHashHex = process.argv[4]
 
-console.log(`Left ${left}`);
-console.log(`Right ${right}`);
-console.log(`Committee hash ${pkHash}`);
+console.log(`Left ${leftHex}`);
+console.log(`Right ${rightHex}`);
+console.log(`Committee hash ${multiSigPubKeyHashHex}`);
 
 const validatorBlueprint = JSON.parse(
   fs.readFileSync('./var/sky-bridge-validator.json')
@@ -80,6 +80,7 @@ const bountyValidator = {
 const bountyAddress = serializePlutusScript(bountyValidator).address
 const bountyUtxos = await blockchainProvider.fetchAddressUTxOs(bountyAddress);
 const bountyUtxo = bountyUtxos[0] // TBD for now claim only one of the UTXOs at bounty
+console.log(JSON.stringify(bountyUtxo))
 
 // ClientRedeemer
 const redeemer = {
@@ -98,3 +99,32 @@ const redeemer = {
 	{ alternative: 0, fields: [ multiSigPubKeyHashHex ] }
     ]
 }
+
+const wallet = new MeshWallet({
+  networkId: 0,
+  fetcher: blockchainProvider,
+  submitter: blockchainProvider,
+  key: {
+    type: 'root',
+    bech32: fs.readFileSync('./var/cla2.skey').toString().trim()
+  }
+})
+
+const recipient = {
+    address: fs.readFileSync('./var/cla2.addr').toString().trim()
+};
+
+const tx = new Transaction({ initiator: wallet, verbose: true })
+      .redeemValue({
+	  value: bountyUtxo,
+	  script: bountyValidator,
+	  redeemer: { data: redeemer }
+      })
+      .sendValue(recipient, bountyUtxo)
+      .setTxRefInputs([ nft ]);
+
+const unsignedTx = await tx.build();
+const signedTx = await wallet.signTx(unsignedTx);
+const txHash = await wallet.submitTx(signedTx);
+
+console.log("OK: tx: " + txHash)

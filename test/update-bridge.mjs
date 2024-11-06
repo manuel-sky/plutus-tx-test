@@ -145,4 +145,4 @@ const unsignedTx = await tx.build();
 const signedTx = await wallet.signTx(unsignedTx);
 const txHash = await wallet.submitTx(signedTx);
 
-console.log(txHash)
+console.log("OK: " + txHash)
