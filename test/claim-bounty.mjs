@@ -20,9 +20,9 @@ import { findUTXOWithSpecificUnit } from "./util.mjs"
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
-const left = process.argv[2]
-const right = process.argv[3]
-const pkHash = process.argv[4]
+const leftHex = process.argv[2]
+const rightHex = process.argv[3]
+const multiSigPubKeyHashHex = process.argv[4]
 
 console.log(`Left ${left}`);
 console.log(`Right ${right}`);
@@ -80,3 +80,21 @@ const bountyValidator = {
 const bountyAddress = serializePlutusScript(bountyValidator).address
 const bountyUtxos = await blockchainProvider.fetchAddressUTxOs(bountyAddress);
 const bountyUtxo = bountyUtxos[0] // TBD for now claim only one of the UTXOs at bounty
+
+// ClientRedeemer
+const redeemer = {
+    alternative: 0,
+    fields: [
+	// SimplifiedMerkleProof
+	{ alternative: 0,
+	  fields: [
+	      // DataHash
+	      { alternative: 0, fields: [ leftHex ] },
+	      // DataHash
+	      { alternative: 0, fields: [ rightHex ] }
+	  ]
+	},
+	// DataHash
+	{ alternative: 0, fields: [ multiSigPubKeyHashHex ] }
+    ]
+}
