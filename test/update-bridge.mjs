@@ -119,6 +119,8 @@ const updatedDatum = {
     ]
 };
 
+console.log("TOP HASH: " + newTopHashHex)
+
 const recipient = {
     address: validatorAddress,
     datum: { value: updatedDatum, inline: true }
