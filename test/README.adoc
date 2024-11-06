@@ -119,17 +119,17 @@ c7fbd27ca6bd42121f4fc1ff6a961a75038bcdf589518693b37f93e6e8934456
 ## Generate Bounty Validator
 
 ```
-cabal run gen-bounty-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bounty-validator.json
+cabal run gen-bounty-blueprint -- "$(cat var/sky-minting-policy.hash)" 1111 var/sky-bounty-validator.json
 ```
 
 ## Offer bounty for hash 1111
 
 ```
-node offer-bounty.mjs $(cat var/sky-minting-policy.hash) 1111
+node offer-bounty.mjs
 ```
 
 ## Claim bounty
 
 ```
-node claim-bounty.mjs $(cat var/sky-minting-policy.hash) 0000 1111 $multi_sig_hash
+node claim-bounty.mjs 0000 1111 $multi_sig_hash
 ```

@@ -1,0 +1,6 @@
+/*
+
+  Offer a bounty.
+
+  Sends some ada from offerer wallet to bounty contract address.
+*/
