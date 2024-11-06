@@ -5,7 +5,8 @@ import fs from 'node:fs'
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
-const recipient = fs.readFileSync(`${process.argv[2]}.addr`).toString()
+const senderSkey = fs.readFileSync(`${process.argv[2]}.skey`).toString().trim()
+const recipient = fs.readFileSync(`${process.argv[3]}.addr`).toString()
 
 const wallet = new MeshWallet({
   networkId: 0,
@@ -13,7 +14,7 @@ const wallet = new MeshWallet({
   submitter: blockchainProvider,
   key: {
     type: 'root',
-    bech32: fs.readFileSync('var/admin.skey').toString().trim()
+    bech32: senderSkey
   }
 })
 
