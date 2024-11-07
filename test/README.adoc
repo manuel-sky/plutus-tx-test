@@ -88,12 +88,12 @@ cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sk
 Now that we have the validator script in link:var/sky-bridge-validator.json[], we can mint the NFT and lock it at the address of the validator with the link:mint-nft.mjs[] script.
 
 ```
-node mint-nft.mjs
+node mint-nft.mjs var/adm3
 ```
 
 The NFT locked at the address on the Preview testnet can be viewed here:
 
-https://preview.cardanoscan.io/tokenHoldings/addr_test1wqvwnk2mcdx92f9grcahrqcx47r0zk3vgrnw02mdqzclmsq8lfgue
+https://preview.cardanoscan.io/tokenHoldings/addr_test1wzm3k9l0epv79cf5x24kuadfe4xk76lvj8vvqv9rpchp3ccsgqpky
 
 ## Updating the Bridge
 
@@ -101,11 +101,6 @@ https://cyphr.me/ed25519_tool/ed.html
 
 Private key: 9DC6A2200837A9910689458F5D278A7D6BE396096EF6DADCE2C0C89165A0640C
 Public key: F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405
-
-```
-node update-bridge.mjs $PUBLIC_KEY $NEW_TOP_HASH $SIG
-# TBD: Add old data hash to arguments
-```
 
 ## Generate Top Hash
 
@@ -118,7 +113,7 @@ pubkeyhash: 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
 D4F4F7B89F392CB2B0B5A0EF8C59DB515551F0FF1EFF7F05A309BF55CA2A0DE86E4A4CC51371A70EF8CE4208F0793600FD81B88AC50EDD381892BCCE0AC39D07
 
 ```
-node update-bridge.mjs F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405 1d3ff551b82c53714e4ce0f9cec89ab4ef8aa92c6da742462f295df9d765814e D4F4F7B89F392CB2B0B5A0EF8C59DB515551F0FF1EFF7F05A309BF55CA2A0DE86E4A4CC51371A70EF8CE4208F0793600FD81B88AC50EDD381892BCCE0AC39D07
+node update-bridge.mjs var/adm3 F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405 1d3ff551b82c53714e4ce0f9cec89ab4ef8aa92c6da742462f295df9d765814e D4F4F7B89F392CB2B0B5A0EF8C59DB515551F0FF1EFF7F05A309BF55CA2A0DE86E4A4CC51371A70EF8CE4208F0793600FD81B88AC50EDD381892BCCE0AC39D07
 ```
 
 ## Generate Bounty Validator
@@ -130,13 +125,13 @@ cabal run gen-bounty-blueprint -- "$(cat var/sky-minting-policy.hash)" 1111 var/
 ## Offer bounty
 
 ```
-node offer-bounty.mjs
+node offer-bounty.mjs var/off3
 ```
 
-bounty: addr_test1wzhgcuuc66c6r3stzu3a4v9pv82pg6v2yjtgezdrg9dtsxqmj9zxc
+bounty: addr_test1wzsfsknn3vgdx2c3f6tak0a4ngcg0f0qr7vfmr5lyhk0nlq6wsa3s
 
 ## Claim bounty
 
 ```
-node claim-bounty.mjs 0000 1111 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
+node claim-bounty.mjs var/cla3 0000 1111 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
 ```

@@ -20,9 +20,25 @@ import { findUTXOWithSpecificUnit } from "./util.mjs"
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
-const leftHex = process.argv[2]
-const rightHex = process.argv[3]
-const multiSigPubKeyHashHex = process.argv[4]
+const principal = process.argv[2]
+
+const wallet = new MeshWallet({
+  networkId: 0,
+  fetcher: blockchainProvider,
+  submitter: blockchainProvider,
+  key: {
+    type: 'root',
+      bech32: fs.readFileSync(`${principal}.skey`).toString().trim()
+  }
+})
+
+const recipient = {
+    address: fs.readFileSync(`${principal}.addr`).toString().trim()
+};
+
+const leftHex = process.argv[3]
+const rightHex = process.argv[4]
+const multiSigPubKeyHashHex = process.argv[5]
 
 console.log(`Left ${leftHex}`);
 console.log(`Right ${rightHex}`);
@@ -81,7 +97,7 @@ const bountyValidator = {
 
 const bountyAddress = serializePlutusScript(bountyValidator).address
 const bountyUtxos = await blockchainProvider.fetchAddressUTxOs(bountyAddress);
-const bountyUtxo = bountyUtxos[2] // TBD for now claim only one of the UTXOs at bounty
+const bountyUtxo = bountyUtxos[0] // TBD for now claim only one of the UTXOs at bounty
 console.log(JSON.stringify(bountyUtxo))
 
 // ClientRedeemer
@@ -101,20 +117,6 @@ const redeemer = {
 	{ alternative: 0, fields: [ multiSigPubKeyHashHex ] }
     ]
 }
-
-const wallet = new MeshWallet({
-  networkId: 0,
-  fetcher: blockchainProvider,
-  submitter: blockchainProvider,
-  key: {
-    type: 'root',
-    bech32: fs.readFileSync('./var/cla2.skey').toString().trim()
-  }
-})
-
-const recipient = {
-    address: fs.readFileSync('./var/cla2.addr').toString().trim()
-};
 
 const tx = new Transaction({ initiator: wallet, verbose: true })
       .redeemValue({

@@ -55,7 +55,7 @@ const datumOut = {
     alternative: 0,
     fields: [
 	{ alternative: 0,
-	  fields: ['4444']
+	  fields: ['4444'] // XXX fake value...
 	}
     ]
 };

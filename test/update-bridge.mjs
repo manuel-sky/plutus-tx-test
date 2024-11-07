@@ -1,3 +1,5 @@
+// TBD needs old data hash as cmdline arg
+
 import cbor from 'cbor'
 import {
     BlockfrostProvider,
@@ -26,13 +28,13 @@ const wallet = new MeshWallet({
   submitter: blockchainProvider,
   key: {
     type: 'root',
-    bech32: fs.readFileSync('./var/admin.skey').toString().trim()
+      bech32: fs.readFileSync(`${process.argv[2]}.skey`).toString().trim()
   }
 })
 
-const publicKeyHex = process.argv[2]
-const newTopHashHex = process.argv[3]
-const sigHex = process.argv[4]
+const publicKeyHex = process.argv[3]
+const newTopHashHex = process.argv[4]
+const sigHex = process.argv[5]
 const oldDataHashHex = '0000' // TBD: Currently ignored by contract
 
 console.log(`Updating bridge with new top hash ${newTopHashHex}\nPublic key: ${publicKeyHex}\nSignature: ${sigHex}`);
@@ -145,4 +147,4 @@ const unsignedTx = await tx.build();
 const signedTx = await wallet.signTx(unsignedTx);
 const txHash = await wallet.submitTx(signedTx);
 
-console.log("OK: " + txHash)
+console.log("OK: tx: " + txHash)
