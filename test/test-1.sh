@@ -9,7 +9,7 @@ export SIG=D4F4F7B89F392CB2B0B5A0EF8C59DB515551F0FF1EFF7F05A309BF55CA2A0DE86E4A4
 
 # Store top hash in bridge
 
-node update-bridge.mjs var/adm3 $PKHASH $TOPHASH $SIG
+node update-bridge.mjs var/admin $PKHASH $TOPHASH $SIG
 
 # Verify that top hash is stored in bridge
 
