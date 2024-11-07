@@ -15,7 +15,7 @@ import cbor from 'cbor'
 
 import fs from 'node:fs'
 
-import { findUTXOWithSpecificUnit } from "./util.mjs"
+import { findUTXOWithSpecificUnit, waitUntilTxReady } from "./util.mjs"
 
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
@@ -132,3 +132,5 @@ const signedTx = await wallet.signTx(unsignedTx);
 const txHash = await wallet.submitTx(signedTx);
 
 console.log("OK: tx: " + txHash)
+
+await waitUntilTxReady(blockchainProvider, txHash);

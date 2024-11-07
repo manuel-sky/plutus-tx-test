@@ -8,3 +8,23 @@ export function findUTXOWithSpecificUnit(utxos, unitToFind) {
     }
     return null;
 }
+
+export async function waitUntilTxReady(blockchainProvider, txHash) {
+    while (true) {
+	try {
+	    console.log("Waiting for tx confirmation: " + txHash);
+	    let result = await blockchainProvider.fetchTxInfo(txHash);
+	    // If we don't get an error, we are done, return
+	    console.log("Tx confirmed: " + txHash);
+	    return;
+	} catch (errString) {
+	    const err = JSON.parse(errString);
+	    if (err.status === 404) {
+		await new Promise(resolve => setTimeout(resolve, 5000));
+		continue;
+	    } else {
+		throw errString;
+	    }
+	}
+    }
+}

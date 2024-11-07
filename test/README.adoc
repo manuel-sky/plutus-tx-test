@@ -54,8 +54,8 @@ Send funds to the admin address.
 We use the link:send-lovelace.mjs[] script to send some Ada for paying fees to the bounty offerer and claimant.
 
 ```
-node send-lovelace.mjs var/adm3 var/off3
-node send-lovelace.mjs var/adm3 var/cla3
+node send-lovelace.mjs var/adm3 var/off3 2500
+node send-lovelace.mjs var/adm3 var/cla3 2500
 ```
 
 ## Create NFT minting policy

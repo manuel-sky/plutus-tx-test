@@ -2,6 +2,8 @@ import { BlockfrostProvider, MeshWallet, Transaction } from '@meshsdk/core'
 
 import fs from 'node:fs'
 
+import { waitUntilTxReady } from "./util.mjs";
+
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
@@ -18,9 +20,8 @@ const wallet = new MeshWallet({
   }
 })
 
-// Send 2500 Ada
 const unsignedTx = await new Transaction({ initiator: wallet })
-  .sendLovelace(recipient, '2500000000')
+  .sendLovelace(recipient, process.argv[4] + '000000')
   .build()
 
 const signedTx = await wallet.signTx(unsignedTx)
@@ -28,3 +29,5 @@ const signedTx = await wallet.signTx(unsignedTx)
 const txHash = await wallet.submitTx(signedTx)
 
 console.log(`Ada sent. Recipient: ${recipient}, Tx hash: ${txHash}`)
+
+await waitUntilTxReady(blockchainProvider, txHash);

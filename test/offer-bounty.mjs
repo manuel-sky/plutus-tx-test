@@ -17,6 +17,8 @@ import {
 
 import fs from 'node:fs'
 
+import { waitUntilTxReady } from "./util.mjs";
+
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
@@ -60,3 +62,5 @@ const signedTx = await wallet.signTx(unsignedTx)
 const txHash = await wallet.submitTx(signedTx)
 
 console.log(`Ada sent. Tx hash: ${txHash}`)
+
+await waitUntilTxReady(blockchainProvider, txHash);
