@@ -10,6 +10,8 @@ import {
 
 import fs from 'node:fs'
 
+import { waitUntilTxReady } from "./util.mjs";
+
 const blockfrostKey = fs.readFileSync(`var/blockfrost.api-key`).toString().trim()
 const blockchainProvider = new BlockfrostProvider(blockfrostKey)
 
@@ -55,7 +57,7 @@ const datumOut = {
     alternative: 0,
     fields: [
 	{ alternative: 0,
-	  fields: ['4444'] // XXX fake value...
+	  fields: ['0000'] // XXX fake value...
 	}
     ]
 };
@@ -89,3 +91,5 @@ const txHash = await wallet.submitTx(signedTx)
 console.log(
   `Minted a token at address ${validatorAddress}. Tx hash: ${txHash}`
 )
+
+await waitUntilTxReady(blockchainProvider, txHash);
