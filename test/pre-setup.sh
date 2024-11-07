@@ -10,3 +10,5 @@ mkdir var
 node generate-keys.mjs var/admin
 node generate-keys.mjs var/offerer
 node generate-keys.mjs var/claimant
+
+echo OK
