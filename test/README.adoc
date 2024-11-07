@@ -1,3 +1,17 @@
+# Sky Protocol Project Catalyst Milestone 2
+
+Reference: https://milestones.projectcatalyst.io/projects/1200203/milestones/2
+
+## Abstract
+
+This repository demonstrates the interplay between a bridge contract
+that stores the root hash of a data availability merkle tree, and a
+client contract that uses the root hash stored in the bridge to pay
+out a bounty.
+
+The root hash in the bridge is stored in an NFT UTXO and must be
+signed by a committee of data availability providers.
+
 # Testing the contracts
 
 ## Overview
