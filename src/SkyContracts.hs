@@ -352,7 +352,7 @@ bridgeUntypedValidator params datum redeemer ctx =
     PlutusTx.check
         ( bridgeTypedValidator
             params
-            (PlutusTx.unsafeFromBuiltinData datum)
+            () -- ignore the untyped datum, it's unused
             (PlutusTx.unsafeFromBuiltinData redeemer)
             (PlutusTx.unsafeFromBuiltinData ctx)
         )
@@ -370,7 +370,7 @@ clientUntypedValidator params datum redeemer ctx =
     PlutusTx.check
         ( clientTypedValidator
             params
-            (PlutusTx.unsafeFromBuiltinData datum)
+            () -- ignore the untyped datum, it's unused
             (PlutusTx.unsafeFromBuiltinData redeemer)
             (PlutusTx.unsafeFromBuiltinData ctx)
         )
