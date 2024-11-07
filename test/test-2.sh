@@ -4,7 +4,6 @@ set -eux
 # Create an offer
 
 node offer-bounty.mjs var/offerer
-sleep 10
 
 # Verify that Ada has been locked at bounty
 
