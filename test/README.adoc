@@ -16,15 +16,15 @@ signed by a committee of data availability providers.
 
 ## Setup
 
-### link:pre-setup.sh[]: Install dependencies and generate keys
+### Step 1: Install dependencies and generate keys (link:pre-setup.sh[])
 
 ```
 ./pre-setup.sh
 ```
 
-### Manual steps:
+### Step 2: Manual configuration
 
-#### Configure Blockfrost provider
+#### Step 2.1: Configure Blockfrost provider
 
 Replace YOUR_BLOCKFROST_API_KEY and call the following command:
 
@@ -32,7 +32,7 @@ Replace YOUR_BLOCKFROST_API_KEY and call the following command:
 echo YOUR_BLOCKFROST_API_KEY > var/blockfrost.api-key
 ```
 
-#### Get funds from testnet faucet
+#### Step 2.2: Get funds from testnet faucet
 
 ```
 cat var/admin.addr
@@ -42,19 +42,19 @@ Go to https://docs.cardano.org/cardano-testnets/tools/faucet/
 
 Send funds to the admin address.
 
-#### link:post-setup.sh[]: Further automatic steps
+### Step 3: Finalize setup (link:post-setup.sh[])
 
 ```
 ./post-setup.sh
 ```
 
-## link:test-1.sh[]: Updating the Bridge
+## Test 1: Updating the Bridge (link:test-1.sh[])
 
 ```
 ./test-1.sh
 ```
 
-## link:test-2.sh[]: Offering and claiming a bounty
+## Test 2: Offering and claiming a bounty (link:test-2.sh[])
 
 ```
 ./test-2.sh
