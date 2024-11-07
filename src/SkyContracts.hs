@@ -143,10 +143,9 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]
 --- UTILITIES
 
 -- Function to find an input UTXO with a specific CurrencySymbol
-findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
-findInputByCurrencySymbol targetSymbol ctx =
+findInputByCurrencySymbol :: CurrencySymbol -> [TxInInfo] -> Maybe TxInInfo
+findInputByCurrencySymbol targetSymbol inputs =
     let assetClass = AssetClass (targetSymbol, TokenName "SkyBridge")
-        inputs = txInfoReferenceInputs $ scriptContextTxInfo ctx
         findSymbol :: TxInInfo -> Bool
         findSymbol txInInfo =
           assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) assetClass PlutusTx.== 1
@@ -167,7 +166,7 @@ getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
 getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
 getBridgeNFTDatumFromContext currencySymbol scriptContext = do
     -- Find the input by currency symbol
-    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
+    inputInfo <- findInputByCurrencySymbol currencySymbol (txInfoInputs (scriptContextTxInfo scriptContext))
     -- Get the transaction output from the input info
     let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
     -- Get the datum from the transaction output
@@ -182,6 +181,19 @@ getBridgeNFTDatumFromTxOut ownOutput ctx = do
   datum <- getDatumFromTxOut ownOutput ctx
   -- Extract the BridgeNFTDatum from the Datum
   getBridgeNFTDatum datum
+
+-- Given a script context, find the bridge NFT UTXO
+-- XXX copypasta for reference inputs, could probably be unified with getBridgeNFTDatumFromContext
+getRefBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
+getRefBridgeNFTDatumFromContext currencySymbol scriptContext = do
+    -- Find the input by currency symbol
+    inputInfo <- findInputByCurrencySymbol currencySymbol (txInfoReferenceInputs (scriptContextTxInfo scriptContext))
+    -- Get the transaction output from the input info
+    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
+    -- Get the datum from the transaction output
+    datum <- getDatumFromTxOut txOut scriptContext
+    -- Get the BridgeNFTDatum from the datum
+    getBridgeNFTDatum datum
 
 --- BRIDGE CONTRACT
 
@@ -304,7 +316,7 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 -- Verify that merkle proof is valid by looking up NFT UTXO in the script context
 merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
 merkleProofValid ctx csym targetHash multiSigPubKeyHash proof =
-  case getBridgeNFTDatumFromContext csym ctx of
+  case getRefBridgeNFTDatumFromContext csym ctx of
     Nothing -> PlutusTx.traceError "bridge NFT not found"
     Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigPubKeyHash proof
 
