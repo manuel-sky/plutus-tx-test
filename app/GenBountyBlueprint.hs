@@ -29,33 +29,24 @@ import PlutusTx.Builtins.HasOpaque (stringToBuiltinByteString)
 import Text.Hex (Text, ByteString, decodeHex)
 import PlutusTx.Builtins (toBuiltin, fromBuiltin, BuiltinByteString)
 import PlutusLedgerApi.V2 (CurrencySymbol(..))
+import Data.Text (pack)
 
 hexStringToBuiltinByteString :: Text -> Maybe BuiltinByteString
 hexStringToBuiltinByteString s = toBuiltin <$> decodeHex s
 
-pub1 = PubKey (fromJust (hexStringToBuiltinByteString "43004B8F43FAF0E3EAAAF55BB41DC53CBF09E42884267BAF8C1EA6903819122C"))
-nftCurrencySymbol = CurrencySymbol (fromJust (hexStringToBuiltinByteString "0A271556EB6FEFCE323D3CAC4C4E53CAE78E3DC9"))
-oldDataHash = DataHash (fromJust (hexStringToBuiltinByteString "55203019b1efae67e2b9b577ce5f881b8367f377"))
-
-clientParams :: ClientParams
-clientParams =
+clientParams :: CurrencySymbol -> DataHash -> ClientParams
+clientParams csym targetHash =
   ClientParams
-    { bountyNFTCurrencySymbol = nftCurrencySymbol
-    , bountyTargetHash = oldDataHash
+    { bountyNFTCurrencySymbol = csym
+    , bountyTargetHash = targetHash
     }
 
-bridgeParams :: BridgeParams
-bridgeParams =
-  BridgeParams
-    { bridgeNFTCurrencySymbol = nftCurrencySymbol
-    }
-
-clientContractBlueprint :: ContractBlueprint
-clientContractBlueprint =
+clientContractBlueprint :: CurrencySymbol -> DataHash -> ContractBlueprint
+clientContractBlueprint csym targetHash =
   MkContractBlueprint
     { contractId = Just "client-validator"
     , contractPreamble = clientPreamble
-    , contractValidators = Set.singleton myClientValidator
+    , contractValidators = Set.singleton (myClientValidator csym targetHash)
     , contractDefinitions = deriveDefinitions @[ClientParams, ClientRedeemer]
     }
 
@@ -69,8 +60,8 @@ clientPreamble =
     , preambleLicense = Just "MIT"
     }
 
-myClientValidator :: ValidatorBlueprint referencedTypes
-myClientValidator =
+myClientValidator :: CurrencySymbol -> DataHash -> ValidatorBlueprint referencedTypes
+myClientValidator csym targetHash =
   MkValidatorBlueprint
     { validatorTitle = "Client Validator"
     , validatorDescription = Just "Plutus script validating auction transactions"
@@ -91,16 +82,16 @@ myClientValidator =
           }
     , validatorDatum = Nothing
     , validatorCompiled = do
-        let script = clientValidatorScript clientParams
+        let script = clientValidatorScript (clientParams csym targetHash)
         let code = Short.fromShort (serialiseCompiledCode script)
         Just (compiledValidator PlutusV2 code)
     }
 
-writeBlueprintToFile :: FilePath -> IO ()
-writeBlueprintToFile path = writeBlueprint path clientContractBlueprint
+writeBlueprintToFile :: CurrencySymbol -> DataHash -> FilePath -> IO ()
+writeBlueprintToFile csym targetHash path = writeBlueprint path (clientContractBlueprint csym targetHash)
 
 main :: IO ()
 main =
   getArgs >>= \case
-    [arg] -> writeBlueprintToFile arg
-    args -> fail $ "Expects one argument, got " <> show (length args)
+    [csym, targetHash, path] -> writeBlueprintToFile (CurrencySymbol (fromJust (hexStringToBuiltinByteString (pack csym)))) (DataHash (fromJust (hexStringToBuiltinByteString (pack targetHash)))) path
+    args -> fail $ "Expects 3 argument, currency symbol, target hash and path, got " <> show (length args)

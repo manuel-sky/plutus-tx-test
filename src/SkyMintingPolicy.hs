@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -fno-unbox-strict-fields #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
-module AuctionMintingPolicy where
+module SkyMintingPolicy where
 
 import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.V1.Value (flattenValue)
@@ -28,17 +28,16 @@ import PlutusLedgerApi.V2.Contexts (ownCurrencySymbol, txSignedBy)
 import PlutusTx
 import PlutusTx.Prelude qualified as PlutusTx
 
--- BLOCK1
-type AuctionMintingParams = PubKeyHash
-type AuctionMintingRedeemer = ()
+type SkyMintingParams = PubKeyHash
+type SkyMintingRedeemer = ()
 
-{-# INLINEABLE auctionTypedMintingPolicy #-}
-auctionTypedMintingPolicy ::
-  AuctionMintingParams ->
-  AuctionMintingRedeemer ->
+{-# INLINEABLE skyTypedMintingPolicy #-}
+skyTypedMintingPolicy ::
+  SkyMintingParams ->
+  SkyMintingRedeemer ->
   ScriptContext ->
   Bool
-auctionTypedMintingPolicy pkh _redeemer ctx =
+skyTypedMintingPolicy pkh _redeemer ctx =
   txSignedBy txInfo pkh PlutusTx.&& mintedExactlyOneToken
   where
     txInfo = scriptContextTxInfo ctx
@@ -46,24 +45,23 @@ auctionTypedMintingPolicy pkh _redeemer ctx =
       [(currencySymbol, _tokenName, quantity)] ->
         currencySymbol PlutusTx.== ownCurrencySymbol ctx PlutusTx.&& quantity PlutusTx.== 1
       _ -> False
--- BLOCK2
 
-auctionUntypedMintingPolicy ::
-  AuctionMintingParams ->
+skyUntypedMintingPolicy ::
+  SkyMintingParams ->
   BuiltinData ->
   BuiltinData ->
   PlutusTx.BuiltinUnit
-auctionUntypedMintingPolicy pkh redeemer ctx =
+skyUntypedMintingPolicy pkh redeemer ctx =
   PlutusTx.check
-    ( auctionTypedMintingPolicy
+    ( skyTypedMintingPolicy
         pkh
         (PlutusTx.unsafeFromBuiltinData redeemer)
         (PlutusTx.unsafeFromBuiltinData ctx)
     )
 
-auctionMintingPolicyScript ::
-  AuctionMintingParams ->
+skyMintingPolicyScript ::
+  SkyMintingParams ->
   CompiledCode (BuiltinData -> BuiltinData -> PlutusTx.BuiltinUnit)
-auctionMintingPolicyScript pkh =
-  $$(PlutusTx.compile [||auctionUntypedMintingPolicy||])
+skyMintingPolicyScript pkh =
+  $$(PlutusTx.compile [||skyUntypedMintingPolicy||])
     `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 pkh

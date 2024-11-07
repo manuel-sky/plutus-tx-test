@@ -23,6 +23,9 @@
 {-# OPTIONS_GHC -fno-unbox-small-strict-fields #-}
 {-# OPTIONS_GHC -fno-unbox-strict-fields #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+-- Debugging
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:coverage-all #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:preserve-logging #-}
 
 -- Docs: https://gist.github.com/manuel-sky/0d74d55d3a7add98276d804e12461c68
 
@@ -102,6 +105,8 @@ PlutusTx.makeLift ''MultiSig
 data BridgeNFTDatum = BridgeNFTDatum
   { bridgeNFTTopHash :: DataHash
   }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
 
 instance Eq BridgeNFTDatum where
   (BridgeNFTDatum th1) == (BridgeNFTDatum th2) = th1 == th2
@@ -116,6 +121,8 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeNFTDatum [('BridgeNFTDatum, 0)]
 data BridgeParams = BridgeParams
   { bridgeNFTCurrencySymbol :: CurrencySymbol
   }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''BridgeParams
 PlutusTx.makeIsDataSchemaIndexed ''BridgeParams [('BridgeParams, 0)]
@@ -127,6 +134,8 @@ data BridgeRedeemer = UpdateBridge
   , bridgeNewTopHash :: DataHash
   , bridgeSig :: MultiSig -- signature over new top hash
   }
+  deriving stock (Generic)
+  deriving anyclass (HasBlueprintDefinition)
 
 PlutusTx.makeLift ''BridgeRedeemer
 PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]
@@ -134,10 +143,9 @@ PlutusTx.makeIsDataSchemaIndexed ''BridgeRedeemer [('UpdateBridge, 0)]
 --- UTILITIES
 
 -- Function to find an input UTXO with a specific CurrencySymbol
-findInputByCurrencySymbol :: CurrencySymbol -> ScriptContext -> Maybe TxInInfo
-findInputByCurrencySymbol targetSymbol ctx =
-    let assetClass = AssetClass (targetSymbol, TokenName "")
-        inputs = txInfoInputs $ scriptContextTxInfo ctx
+findInputByCurrencySymbol :: CurrencySymbol -> [TxInInfo] -> Maybe TxInInfo
+findInputByCurrencySymbol targetSymbol inputs =
+    let assetClass = AssetClass (targetSymbol, TokenName "SkyBridge")
         findSymbol :: TxInInfo -> Bool
         findSymbol txInInfo =
           assetClassValueOf (txOutValue (txInInfoResolved txInInfo)) assetClass PlutusTx.== 1
@@ -158,7 +166,7 @@ getBridgeNFTDatum (Datum d) = PlutusTx.fromBuiltinData d
 getBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
 getBridgeNFTDatumFromContext currencySymbol scriptContext = do
     -- Find the input by currency symbol
-    inputInfo <- findInputByCurrencySymbol currencySymbol scriptContext
+    inputInfo <- findInputByCurrencySymbol currencySymbol (txInfoInputs (scriptContextTxInfo scriptContext))
     -- Get the transaction output from the input info
     let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
     -- Get the datum from the transaction output
@@ -173,6 +181,19 @@ getBridgeNFTDatumFromTxOut ownOutput ctx = do
   datum <- getDatumFromTxOut ownOutput ctx
   -- Extract the BridgeNFTDatum from the Datum
   getBridgeNFTDatum datum
+
+-- Given a script context, find the bridge NFT UTXO
+-- XXX copypasta for reference inputs, could probably be unified with getBridgeNFTDatumFromContext
+getRefBridgeNFTDatumFromContext :: CurrencySymbol -> ScriptContext -> Maybe BridgeNFTDatum
+getRefBridgeNFTDatumFromContext currencySymbol scriptContext = do
+    -- Find the input by currency symbol
+    inputInfo <- findInputByCurrencySymbol currencySymbol (txInfoReferenceInputs (scriptContextTxInfo scriptContext))
+    -- Get the transaction output from the input info
+    let txOut = txInInfoResolved inputInfo  -- This retrieves the TxOut from TxInInfo
+    -- Get the datum from the transaction output
+    datum <- getDatumFromTxOut txOut scriptContext
+    -- Get the BridgeNFTDatum from the datum
+    getBridgeNFTDatum datum
 
 --- BRIDGE CONTRACT
 
@@ -197,6 +218,8 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
               outputHasNFT,
               -- The NFT's data must have been updated
               nftUpdated newTopHash
+              -- The hash of pair(multisig-hash, old-data-hash) must be = old-top-hash
+              -- TBD
             ]
 
     ownOutput :: TxOut
@@ -207,7 +230,7 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     -- There must be exactly one output UTXO with our NFT's unique currency symbol
     outputHasNFT :: Bool
     outputHasNFT =
-      let assetClass = (AssetClass ((bridgeNFTCurrencySymbol params), TokenName "")) in
+      let assetClass = (AssetClass ((bridgeNFTCurrencySymbol params), TokenName "SkyBridge")) in
       assetClassValueOf (txOutValue ownOutput) assetClass PlutusTx.== 1
 
     bridgeNFTDatum :: Maybe BridgeNFTDatum
@@ -220,14 +243,19 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 
 -- Function that checks if a SingleSig is valid
 singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
-singleSigValid (PubKey pubKey) (DataHash challenge) (SingleSig sig) =
-  verifyEd25519Signature pubKey challenge sig
+singleSigValid (PubKey pubKey) (DataHash topHash) (SingleSig sig) =
+  verifyEd25519Signature pubKey topHash sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
 -- (Currently enforces that there's only one signature in the multisig for simplicity.)
 multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
-multiSigValid (MultiSigPubKey [pubKey] _) challenge (MultiSig [singleSig]) =
-  singleSigValid pubKey challenge singleSig
+multiSigValid (MultiSigPubKey [pubKey] _) topHash (MultiSig [singleSig]) =
+  singleSigValid pubKey topHash singleSig
+
+-- Create fingerprint of a multisig pubkey
+multiSigToDataHash :: MultiSigPubKey -> DataHash
+multiSigToDataHash (MultiSigPubKey [(PubKey pubKey)] _) =
+  DataHash (sha2_256 pubKey)
 
 --- CLIENT CONTRACT
 
@@ -288,8 +316,8 @@ clientTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 -- Verify that merkle proof is valid by looking up NFT UTXO in the script context
 merkleProofValid :: ScriptContext -> CurrencySymbol -> DataHash -> DataHash -> SimplifiedMerkleProof -> Bool
 merkleProofValid ctx csym targetHash multiSigPubKeyHash proof =
-  case getBridgeNFTDatumFromContext csym ctx of
-    Nothing -> False
+  case getRefBridgeNFTDatumFromContext csym ctx of
+    Nothing -> PlutusTx.traceError "bridge NFT not found"
     Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigPubKeyHash proof
 
 -- Hashes the concatenation of a pair of hashes
@@ -324,7 +352,7 @@ bridgeUntypedValidator params datum redeemer ctx =
     PlutusTx.check
         ( bridgeTypedValidator
             params
-            (PlutusTx.unsafeFromBuiltinData datum)
+            () -- ignore the untyped datum, it's unused
             (PlutusTx.unsafeFromBuiltinData redeemer)
             (PlutusTx.unsafeFromBuiltinData ctx)
         )
@@ -342,7 +370,7 @@ clientUntypedValidator params datum redeemer ctx =
     PlutusTx.check
         ( clientTypedValidator
             params
-            (PlutusTx.unsafeFromBuiltinData datum)
+            () -- ignore the untyped datum, it's unused
             (PlutusTx.unsafeFromBuiltinData redeemer)
             (PlutusTx.unsafeFromBuiltinData ctx)
         )

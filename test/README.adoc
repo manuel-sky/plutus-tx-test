@@ -1,0 +1,151 @@
+# Sky Protocol Project Catalyst Milestone 2
+
+Reference: https://milestones.projectcatalyst.io/projects/1200203/milestones/2
+
+## Abstract
+
+This repository demonstrates the interplay between a bridge contract
+that stores the root hash of a data availability merkle tree, and a
+client contract that uses the root hash stored in the bridge to pay
+out a bounty.
+
+The root hash in the bridge is stored in an NFT UTXO and must be
+signed by a committee of data availability providers.
+
+# Testing the contracts
+
+## Overview
+
+This document describes the process to use the MeshJS off-chain framework to generate wallets for admin, offerer, and claimant; distribute some testnet Ada to the wallets to pay fees; create the minting policy for our bridge NFT; create the bridge validator script; mint the NFT and lock it at the bridge's address.
+
+## Install deps
+
+```
+sudo apt-get install jq
+npm install
+```
+
+## Create directory for application data
+
+We use the link:var[] directory to store application data.  In this repo, it is checked in for demonstration purposes.
+
+```
+mkdir var
+```
+
+## Generate keys for admin as well as bounty offerer and claimant
+
+We use the link:generate-keys.mjs[] script to generate addresses (e.g. link:var/admin.addr[]), pubkey hashes (e.g. link:var/admin.pkh[]), and private keys (e.g. link:var/admin.skey[]) for an admin, a bounty offerer, and a bounty claimant.
+
+```
+node generate-keys.mjs var/adm3
+node generate-keys.mjs var/off3
+node generate-keys.mjs var/cla3
+```
+
+## Set up Blockfrost provider
+
+Replace YOUR_BLOCKFROST_API_KEY and call the following command to create link:var/blockfrost.api-key[].
+
+```
+echo YOUR_BLOCKFROST_API_KEY > var/blockfrost.api-key
+```
+
+## Get funds from testnet faucet
+
+Get the admin's address from link:var/adm3.addr[]:
+
+```
+cat var/adm3.addr
+```
+
+Go to https://docs.cardano.org/cardano-testnets/tools/faucet/
+
+Send funds to the admin address.
+
+## Distribute some Ada to bounty offerer and claimant
+
+We use the link:send-lovelace.mjs[] script to send some Ada for paying fees to the bounty offerer and claimant.
+
+```
+node send-lovelace.mjs var/adm3 var/off3 2500
+node send-lovelace.mjs var/adm3 var/cla3 2500
+```
+
+## Create NFT minting policy
+
+Supplies the admin's public key hash as input to the link:../app/GenMintingPolicyBlueprint.hs[] command to produce the link:var/sky-minting-policy.json[] minting policy Blueprint JSON from link:../src/SkyMintingPolicy.hs[].
+
+```
+cabal run gen-minting-policy-blueprint -- "$(cat var/adm3.pkh)" var/sky-minting-policy.json
+```
+
+## Extract bridge validator and minting policy hashes
+
+Use jq to extract the hashes from the policy files for later use.
+
+```
+cat var/sky-bridge-validator.json | jq -r '.validators[0].hash' > var/sky-bridge-validator.hash
+cat var/sky-minting-policy.json | jq -r '.validators[0].hash' > var/sky-minting-policy.hash
+```
+
+## Generate Bridge Validator
+
+Supply the minting policy hash from link:var/sky-minting-policy.hash[] as argument to the link:../app/GenValidatorBlueprint.hs[] command in order to produce the link:var/sky-bridge-validator.json[] Blueprint JSON for the validator from link:../src/SkyContracts.hs[].
+
+```
+cabal run gen-validator-blueprint -- "$(cat var/sky-minting-policy.hash)" var/sky-bridge-validator.json
+```
+
+## Mint the NFT at the bridge's address
+
+Now that we have the validator script in link:var/sky-bridge-validator.json[], we can mint the NFT and lock it at the address of the validator with the link:mint-nft.mjs[] script.
+
+```
+node mint-nft.mjs var/adm3
+```
+
+The NFT locked at the address on the Preview testnet can be viewed here:
+
+https://preview.cardanoscan.io/tokenHoldings/addr_test1wzm3k9l0epv79cf5x24kuadfe4xk76lvj8vvqv9rpchp3ccsgqpky
+
+## Updating the Bridge
+
+https://cyphr.me/ed25519_tool/ed.html
+
+Private key: 9DC6A2200837A9910689458F5D278A7D6BE396096EF6DADCE2C0C89165A0640C
+Public key: F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405
+
+## Generate Top Hash
+
+cabal run gen-top-hash F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405 0000 1111
+tophash: 1d3ff551b82c53714e4ce0f9cec89ab4ef8aa92c6da742462f295df9d765814e
+pubkeyhash: 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
+
+## Sign it
+
+D4F4F7B89F392CB2B0B5A0EF8C59DB515551F0FF1EFF7F05A309BF55CA2A0DE86E4A4CC51371A70EF8CE4208F0793600FD81B88AC50EDD381892BCCE0AC39D07
+
+```
+node update-bridge.mjs var/adm3 F710662FC12F8852CBA4BAD811E770005A6E5311DA328D12FA5A46AEC707C405 1d3ff551b82c53714e4ce0f9cec89ab4ef8aa92c6da742462f295df9d765814e D4F4F7B89F392CB2B0B5A0EF8C59DB515551F0FF1EFF7F05A309BF55CA2A0DE86E4A4CC51371A70EF8CE4208F0793600FD81B88AC50EDD381892BCCE0AC39D07
+```
+
+## Generate Bounty Validator
+
+```
+cabal run gen-bounty-blueprint -- "$(cat var/sky-minting-policy.hash)" 1111 var/sky-bounty-validator.json
+```
+
+## Offer bounty
+
+```
+node offer-bounty.mjs var/off3
+```
+
+bounty: addr_test1wzsfsknn3vgdx2c3f6tak0a4ngcg0f0qr7vfmr5lyhk0nlq6wsa3s
+
+## Claim bounty
+
+```
+node claim-bounty.mjs var/cla3 0000 1111 4b4f90f0670c7d8d26949bfc1b90de7e12a572094ec1cdf23fec3e1f9a4bcf71
+```
