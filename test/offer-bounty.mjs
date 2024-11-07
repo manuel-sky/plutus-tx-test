@@ -54,9 +54,9 @@ const recipient = {
 
 console.log(recipient)
 
-// Send 100 ada to bounty
+// Send 10 ada to bounty
 const unsignedTx = await new Transaction({ initiator: wallet, verbose: true })
-  .sendLovelace(recipient, '100000000')
+  .sendLovelace(recipient, '10000000')
   .build()
 const signedTx = await wallet.signTx(unsignedTx)
 const txHash = await wallet.submitTx(signedTx)
