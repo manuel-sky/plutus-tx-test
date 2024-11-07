@@ -16,7 +16,7 @@ signed by a committee of data availability providers.
 
 ## Setup
 
-### Install dependencies and generate keys
+### link:pre-setup.sh[]: Install dependencies and generate keys
 
 ```
 ./pre-setup.sh
@@ -42,19 +42,19 @@ Go to https://docs.cardano.org/cardano-testnets/tools/faucet/
 
 Send funds to the admin address.
 
-#### Further automatic steps
+#### link:post-setup.sh[]: Further automatic steps
 
 ```
 ./post-setup.sh
 ```
 
-## Test 1: Updating the Bridge
+## link:test-1.sh[]: Updating the Bridge
 
 ```
 ./test-1.sh
 ```
 
-## Test 2: Offering and claiming a bounty
+## link:test-2.sh[]: Offering and claiming a bounty
 
 ```
 ./test-2.sh
