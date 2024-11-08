@@ -1,4 +1,6 @@
-// TBD needs old data hash as cmdline arg
+/*
+  Updates the top hash stored in the bridge NFT
+*/
 
 import cbor from 'cbor'
 import {
@@ -105,8 +107,6 @@ const redeemer = {
     ]
 }
 
-//console.log(JSON.stringify(redeemer, null, 2))
-
 const utxos = await blockchainProvider.fetchAddressUTxOs(validatorAddress);
 // The NFT
 const utxo = findUTXOWithSpecificUnit(utxos, mintingPolicyHash + stringToHex('SkyBridge'))
@@ -126,9 +126,6 @@ const recipient = {
     address: validatorAddress,
     datum: { value: updatedDatum, inline: true }
 };
-
-// const walletUtxos = await wallet.getUtxos();
-// const changeAddress = await wallet.getChangeAddress();
 
 const tx = new Transaction({ initiator: wallet, verbose: true })
       .redeemValue({

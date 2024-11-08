@@ -4,35 +4,35 @@
 
 This repository demonstrates the interplay between a bridge contract
 that stores the root hash of a data availability merkle tree, and a
-client contract that uses the root hash stored in the bridge to pay
-out a bounty.
+client contract that uses the root hash stored in the bridge to lock
+and pay out a bounty prize.
 
-The root hash in the bridge is stored in an NFT UTXO and must be
-signed by a committee of data availability providers.
+The root hash in is stored in an NFT UTXO and must be signed by a
+committee of data availability providers.
 
 ## Acceptance criteria
 
 Reference: https://milestones.projectcatalyst.io/projects/1200203/milestones/2
 
-### 1
+### Criterium 1
 
 [quote]
 The deliverable is to demonstrate the basic infrastructure for
 stateful interaction with and between two smart contracts, one for the
 DA bridge, one for a DA client
 
-The file link:src/SkyContracts.hs[] contains the bridge
+The file link:../src/SkyContracts.hs[] contains the bridge
 (`bridgeTypedValidator`) and client (bounty) contracts
 (`clientTypedValidator`).
 
-### 2
+### Criterium 2
 
 [quote]
 The smart contracts should build, and the tests shall pass
 
 See setup and testing instructions, below.
 
-### 3
+### Criterium 3
 
 [quote]
 The tests shall actually have a private Cardano network
@@ -41,7 +41,7 @@ interaction
 
 The tests, below, execute on the Cardano Preview testnet.
 
-### 4
+### Criterium 4
 
 [quote]
 Since they must actually run on-chain, the smart contracts must be
@@ -51,17 +51,42 @@ choose.
 We use PlutusTx Haskell for the on-chain contracts, and the MeshJS
 framework for the off-chain parts.
 
-## Contracts
+## Contracts Overview
+
+The general idea is that the bridge NFT contains a hash, called the
+_top hash_ of both the root hash of the DA merkle tree as well as the
+fingerprint of the data providers' committee multisig.
+
+Updating the top hash requires supplying a signature by the DA committee.
+
+A client contract may depend on the top hash by using the bridge NFT
+as a CIP-31 reference input.
+
+An example of a client contract is a so-called bounty contract, which
+locks some funds, and pays them out if a claimant can prove that a
+particular datum is stored in the DA merkle tree.
+
+The claimant does this by supplying a merkle proof of data inclusion,
+as well as the fingerprint of the current committee multisig.
 
 ## Simplifying assumptions
 
-* Per non-criteria 1: Instead of a committee multisig, only a single
+* Per non-criterium 1: Instead of a committee multisig, only a single
   public key is used.  This will be extended to a real multisig for
   the next milestone.
 
-* Per non-criteria 1: Instead of a full Merkle proof, this uses a
+* Per non-criterium 1: Instead of a full Merkle proof, this uses a
   reduced 1-level, 2-arm Merkle proof.  Only the left or right hash
   has to be supplied.  This will be extended for the next milestone.
+
+* The bounty fund locking mechanism used for testing is very simple -
+  we always assume a single UTXO with 10 Ada will be the bounty prize.
+
+* The NFT is not a "real", UTXO-based NFT and instead uses the
+  construction from the
+  https://github.com/IntersectMBO/plutus-tx-template where NFT minting
+  is guarded by a private key, and simply only a single one is ever
+  created.
 
 # Testing the contracts
 
@@ -110,8 +135,8 @@ Send funds to the admin address.
 ## Test 1: Updating the Bridge
 
 This test demonstrates updating the bridge UTXO NFT with two different
-merkle root hashes, and verifying (by querying the blockchain) that
-the updates have indeed happened.
+merkle root hashes in sequence, and verifying (by querying the
+blockchain) after each step that the updates have indeed happened.
 
 Check out the link:test-1.sh[] file for a more detailed description.
 

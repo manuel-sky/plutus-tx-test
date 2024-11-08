@@ -1,3 +1,7 @@
+/*
+  Verifies that some funds are locked at the bounty contract address.
+*/
+
 import {
     BlockfrostProvider,
     MeshWallet,

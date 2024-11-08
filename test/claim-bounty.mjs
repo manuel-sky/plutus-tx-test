@@ -1,3 +1,7 @@
+/*
+  Claims the bounty funds by supplying a Merkle proof.
+*/
+
 import {
     BlockfrostProvider,
     MeshWallet,
