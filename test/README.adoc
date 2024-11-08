@@ -1,7 +1,5 @@
 # Sky Protocol Project Catalyst Milestone 2
 
-Reference: https://milestones.projectcatalyst.io/projects/1200203/milestones/2
-
 ## Abstract
 
 This repository demonstrates the interplay between a bridge contract
@@ -11,6 +9,59 @@ out a bounty.
 
 The root hash in the bridge is stored in an NFT UTXO and must be
 signed by a committee of data availability providers.
+
+## Acceptance criteria
+
+Reference: https://milestones.projectcatalyst.io/projects/1200203/milestones/2
+
+### 1
+
+[quote]
+The deliverable is to demonstrate the basic infrastructure for
+stateful interaction with and between two smart contracts, one for the
+DA bridge, one for a DA client
+
+The file link:src/SkyContracts.hs[] contains the bridge
+(`bridgeTypedValidator`) and client (bounty) contracts
+(`clientTypedValidator`).
+
+### 2
+
+[quote]
+The smart contracts should build, and the tests shall pass
+
+See setup and testing instructions, below.
+
+### 3
+
+[quote]
+The tests shall actually have a private Cardano network
+execute the on-chain smart contract flows of a Data Availability
+interaction
+
+The tests, below, execute on the Cardano Preview testnet.
+
+### 4
+
+[quote]
+Since they must actually run on-chain, the smart contracts must be
+written in a language that supports Cardano, whichever language we may
+choose.
+
+We use PlutusTx Haskell for the on-chain contracts, and the MeshJS
+framework for the off-chain parts.
+
+## Contracts
+
+## Simplifying assumptions
+
+* Per non-criteria 1: Instead of a committee multisig, only a single
+  public key is used.  This will be extended to a real multisig for
+  the next milestone.
+
+* Per non-criteria 1: Instead of a full Merkle proof, this uses a
+  reduced 1-level, 2-arm Merkle proof.  Only the left or right hash
+  has to be supplied.  This will be extended for the next milestone.
 
 # Testing the contracts
 
