@@ -1,14 +1,11 @@
 /*
-  Arguments: <wallet> <pubkey> <tophash> <sig>
+  node update-bridge.mjs <wallet> <pubkey> <top-hash-hex> <sig>
 
   Updates the top hash stored in the bridge NFT.
 
   Wallet will be used to pay fees.
-
   Pubkey is the committee public key.
-
-  Tophash is hash of merkle root and committee fingerprint.
-
+  Top-hash-hex is hash of merkle root and committee fingerprint.
   Sig is signature of tophash.
 */
 

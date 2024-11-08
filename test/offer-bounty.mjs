@@ -1,7 +1,9 @@
 /*
+  node offer-bounty.mjs <wallet>
+
   Offer a bounty.
 
-  Sends some ada from offerer wallet to bounty contract address.
+  Sends some Ada from offerer wallet to bounty contract address.
 */
 
 import cbor from 'cbor'

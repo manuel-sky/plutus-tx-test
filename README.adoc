@@ -1,0 +1,3 @@
+# Sky Project Catalyst
+
+Please see the link:test[] directory for Milestone 2 tests.

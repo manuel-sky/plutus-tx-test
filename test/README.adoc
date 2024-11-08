@@ -74,6 +74,16 @@ prove that a datum with the hash `1111` is stored in the DA network.
 (Our system supports hashes of any length, we just such a simple one
 for this test for memorability reasons).
 
+### Important Files
+
+* link:../src/SkyContracts.hs -- Bridge and bounty contracts
+
+* link:../src/SkyMintingPolicy.hs -- Bridge NFT minting policy
+
+* link:../app -- Blueprint generators for contracts and minting policy
+
+* link:test (this directory) -- Off-chain code and tests
+
 ## Simplifying assumptions
 
 * Per non-criterium 1: Instead of a committee multisig, only a single

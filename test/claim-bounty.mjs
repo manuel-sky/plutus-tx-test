@@ -1,5 +1,8 @@
 /*
-  Claims the bounty funds by supplying a Merkle proof.
+  node claim-bounty.mjs <left> <right> <fingerprint>
+
+  Claims the bounty funds by supplying a Merkle proof with left and
+  right arms, and the fingerprint of the committee multisig.
 */
 
 import {

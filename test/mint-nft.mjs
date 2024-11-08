@@ -1,3 +1,9 @@
+/*
+  node mint-nft.mjs <wallet>
+
+  Mints the bridge NFT using funds from the wallet.
+*/
+
 import cbor from 'cbor'
 import {
   BlockfrostProvider,
