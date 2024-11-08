@@ -7,7 +7,7 @@ that stores the root hash of a data availability merkle tree, and a
 client contract that uses the root hash stored in the bridge to lock
 and pay out a bounty prize.
 
-The root hash in is stored in an NFT UTXO and must be signed by a
+The root hash is stored in an NFT UTXO and must be signed by a
 committee of data availability providers.
 
 ## Acceptance criteria
@@ -48,7 +48,7 @@ Since they must actually run on-chain, the smart contracts must be
 written in a language that supports Cardano, whichever language we may
 choose.
 
-We use PlutusTx Haskell for the on-chain contracts, and the MeshJS
+We use PlutusTx for the on-chain contracts, and the MeshJS
 framework for the off-chain parts.
 
 ## Contracts Overview
@@ -68,6 +68,11 @@ particular datum is stored in the DA merkle tree.
 
 The claimant does this by supplying a merkle proof of data inclusion,
 as well as the fingerprint of the current committee multisig.
+
+In our example, the bounty prize will be paid out if the claimant can
+prove that a datum with the hash `1111` is stored in the DA network.
+(Our system supports hashes of any length, we just such a simple one
+for this test for memorability reasons).
 
 ## Simplifying assumptions
 

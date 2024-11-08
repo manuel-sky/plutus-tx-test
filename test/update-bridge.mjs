@@ -1,5 +1,15 @@
 /*
-  Updates the top hash stored in the bridge NFT
+  Arguments: <wallet> <pubkey> <tophash> <sig>
+
+  Updates the top hash stored in the bridge NFT.
+
+  Wallet will be used to pay fees.
+
+  Pubkey is the committee public key.
+
+  Tophash is hash of merkle root and committee fingerprint.
+
+  Sig is signature of tophash.
 */
 
 import cbor from 'cbor'
