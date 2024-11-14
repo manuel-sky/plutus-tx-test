@@ -32,6 +32,7 @@
 module SkyContracts where
 
 import GHC.Generics (Generic)
+import Data.List (nub)
 
 import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.V1 (Lovelace, POSIXTime, PubKeyHash)
@@ -81,9 +82,14 @@ data MultiSigPubKey = MultiSigPubKey [PubKey] Integer
   deriving anyclass (HasBlueprintDefinition)
 
 -- A single signature by a single data operator public key
-data SingleSig = SingleSig PlutusTx.BuiltinByteString
+data SingleSig = SingleSig PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
+instance Eq SingleSig where
+  (SingleSig pubKey1 sig1) == (SingleSig pubKey2 sig2) = pubKey1 == pubKey2 && sig1 == sig2
+instance PlutusTx.Eq SingleSig where
+  (SingleSig pubKey1 sig1) == (SingleSig pubKey2 sig2) = pubKey1 == pubKey2 && sig1 == sig2
 
 -- Signatures produced by data operators for top hash, must be in same order as multi-sig pubkeys
 data MultiSig = MultiSig [SingleSig]
@@ -242,15 +248,22 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
       bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash)
 
 -- Function that checks if a SingleSig is valid
-singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
-singleSigValid (PubKey pubKey) (DataHash topHash) (SingleSig sig) =
+singleSigValid :: DataHash -> SingleSig -> Bool
+singleSigValid (DataHash topHash) (SingleSig (PubKey pubKey) sig) =
   verifyEd25519Signature pubKey topHash sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
--- (Currently enforces that there's only one signature in the multisig for simplicity.)
 multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
-multiSigValid (MultiSigPubKey [pubKey] _) topHash (MultiSig [singleSig]) =
-  singleSigValid pubKey topHash singleSig
+multiSigValid (MultiSigPubKey pubKeys minSigs) topHash (MultiSig singleSigs) =
+  let -- Extract the public keys from the SingleSig values
+      pubKeysInSignatures = map (\(SingleSig pubKey _) -> pubKey) singleSigs
+      -- Check for duplicates by comparing the list to its nub version
+      noDuplicates = pubKeysInSignatures == nub pubKeysInSignatures
+  in if not noDuplicates
+     then False -- Duplicates found, return False
+     else let -- Filter for valid signatures from required public keys
+              validSignatures = filter (\ss@(SingleSig pubKey sig) -> pubKey `elem` pubKeys && singleSigValid topHash ss) singleSigs
+          in length validSignatures >= fromInteger minSigs
 
 -- Create fingerprint of a multisig pubkey
 multiSigToDataHash :: MultiSigPubKey -> DataHash
