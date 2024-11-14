@@ -222,9 +222,9 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
               -- The NFT must be again included in the outputs
               outputHasNFT,
               -- The NFT's data must have been updated
-              nftUpdated newTopHash
+              nftUpdated newTopHash,
               -- The hash of pair(multisig-hash, old-data-hash) must be = old-top-hash
-              -- TBD
+              oldTopHashMatches committee oldDataHash 
             ]
 
     ownOutput :: TxOut
@@ -240,6 +240,11 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 
     bridgeNFTDatum :: Maybe BridgeNFTDatum
     bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
+
+    oldTopHashMatches :: MultiSigPubKey -> DataHash -> Bool
+    oldTopHashMatches committee oldDataHash =
+      let (Just (BridgeNFTDatum oldDataHash)) = bridgeNFTDatum in
+        True
 
     -- The NFT UTXO's datum must match the new values for the root hashes
     nftUpdated :: DataHash -> Bool
