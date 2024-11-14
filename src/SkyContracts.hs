@@ -65,6 +65,10 @@ instance Eq DataHash where
 instance PlutusTx.Eq DataHash where
     (DataHash dh1) == (DataHash dh2) = equalsByteString dh1 dh2
 
+-- Hashes the concatenation of a pair of hashes
+pairHash :: DataHash -> DataHash -> DataHash
+pairHash (DataHash a) (DataHash b) = DataHash (sha2_256 (a `appendByteString` b))
+
 -- A public key
 data PubKey = PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
@@ -243,8 +247,8 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
 
     oldTopHashMatches :: MultiSigPubKey -> DataHash -> Bool
     oldTopHashMatches committee oldDataHash =
-      let (Just (BridgeNFTDatum oldDataHash)) = bridgeNFTDatum in
-        True
+      let (Just (BridgeNFTDatum oldTopHash)) = bridgeNFTDatum in
+        oldTopHash PlutusTx.== pairHash (multiSigToDataHash committee) oldDataHash
 
     -- The NFT UTXO's datum must match the new values for the root hashes
     nftUpdated :: DataHash -> Bool
@@ -346,10 +350,6 @@ merkleProofValid ctx csym targetHash multiSigPubKeyHash proof =
   case getRefBridgeNFTDatumFromContext csym ctx of
     Nothing -> PlutusTx.traceError "bridge NFT not found"
     Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigPubKeyHash proof
-
--- Hashes the concatenation of a pair of hashes
-pairHash :: DataHash -> DataHash -> DataHash
-pairHash (DataHash a) (DataHash b) = DataHash (sha2_256 (a `appendByteString` b))
 
 -- Hashes a merkle proof to produce the root data hash
 merkleProofToDataHash :: SimplifiedMerkleProof -> DataHash
