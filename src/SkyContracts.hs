@@ -32,7 +32,6 @@
 module SkyContracts where
 
 import GHC.Generics (Generic)
-import Data.List (nub)
 
 import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.V1 (Lovelace, POSIXTime, PubKeyHash)
@@ -256,14 +255,14 @@ singleSigValid (DataHash topHash) (SingleSig (PubKey pubKey) sig) =
 multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
 multiSigValid (MultiSigPubKey pubKeys minSigs) topHash (MultiSig singleSigs) =
   let -- Extract the public keys from the SingleSig values
-      pubKeysInSignatures = map (\(SingleSig pubKey _) -> pubKey) singleSigs
+      pubKeysInSignatures = PlutusTx.map (\(SingleSig pubKey _) -> pubKey) singleSigs
       -- Check for duplicates by comparing the list to its nub version
-      noDuplicates = pubKeysInSignatures == nub pubKeysInSignatures
+      noDuplicates = pubKeysInSignatures PlutusTx.== PlutusTx.nub pubKeysInSignatures
   in if not noDuplicates
      then False -- Duplicates found, return False
      else let -- Filter for valid signatures from required public keys
-              validSignatures = filter (\ss@(SingleSig pubKey sig) -> pubKey `elem` pubKeys && singleSigValid topHash ss) singleSigs
-          in length validSignatures >= fromInteger minSigs
+              validSignatures = PlutusTx.filter (\ss@(SingleSig pubKey sig) -> pubKey `PlutusTx.elem` pubKeys && singleSigValid topHash ss) singleSigs
+          in PlutusTx.length validSignatures PlutusTx.>= minSigs
 
 -- Create fingerprint of a multisig pubkey
 multiSigToDataHash :: MultiSigPubKey -> DataHash
