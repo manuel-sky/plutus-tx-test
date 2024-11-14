@@ -248,7 +248,7 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     oldTopHashMatches :: MultiSigPubKey -> DataHash -> Bool
     oldTopHashMatches committee oldDataHash =
       let (Just (BridgeNFTDatum oldTopHash)) = bridgeNFTDatum in
-        oldTopHash PlutusTx.== pairHash (multiSigToDataHash committee) oldDataHash
+        oldTopHash PlutusTx.== pairHash oldDataHash (multiSigToDataHash committee)
 
     -- The NFT UTXO's datum must match the new values for the root hashes
     nftUpdated :: DataHash -> Bool
