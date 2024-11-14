@@ -271,8 +271,18 @@ multiSigValid (MultiSigPubKey pubKeys minSigs) topHash (MultiSig singleSigs) =
 
 -- Create fingerprint of a multisig pubkey
 multiSigToDataHash :: MultiSigPubKey -> DataHash
-multiSigToDataHash (MultiSigPubKey [(PubKey pubKey)] _) =
-  DataHash (sha2_256 pubKey)
+multiSigToDataHash (MultiSigPubKey pubKeys _) = 
+    let -- Step 1: Concatenate the public keys manually
+        concatenated = concatPubKeys pubKeys
+        -- Step 2: Apply sha2_256 to the concatenated byte string
+        hashed = sha2_256 concatenated
+    in DataHash hashed
+
+-- Helper function to concatenate a list of PubKey byte strings
+concatPubKeys :: [PubKey] -> PlutusTx.BuiltinByteString
+concatPubKeys (PubKey pk : rest) = -- assume at least one pubkey
+    let restConcatenated = concatPubKeys rest
+    in appendByteString pk restConcatenated
 
 --- CLIENT CONTRACT
 
