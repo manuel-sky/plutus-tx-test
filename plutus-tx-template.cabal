@@ -19,9 +19,9 @@ library scripts
   build-depends:
     , base
     , containers
-    , plutus-core ^>=1.34.1.0
-    , plutus-ledger-api ^>=1.34.1.0
-    , plutus-tx ^>=1.34.1.0
+    , plutus-core ^>=1.9
+    , plutus-ledger-api ^>=1.9
+    , plutus-tx ^>=1.9
 
   if !(impl(ghcjs) || os(ghcjs))
     build-depends: plutus-tx-plugin
@@ -34,13 +34,20 @@ executable gen-validator-blueprint
     , base
     , bytestring
     , containers
-    , plutus-core ^>=1.34.1.0
-    , plutus-ledger-api ^>=1.34.1.0
-    , plutus-tx ^>=1.34.1.0
-    , plutus-tx-plugin ^>=1.34.1.0
+    , plutus-core ^>=1.9
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
     , scripts
     , hex-text ^>=0.1.0.9
     , text ^>=2.0.2
+
+executable gen-validator-blueprint-2
+  import:           options
+  hs-source-dirs:   app
+  main-is:          GenValidatorBlueprint.hs
+  build-depends:
+    , cardano-node-emulator ^>=1.3
 
 executable gen-bounty-blueprint
   import:           options
@@ -50,10 +57,10 @@ executable gen-bounty-blueprint
     , base
     , bytestring
     , containers
-    , plutus-core ^>=1.34.1.0
-    , plutus-ledger-api ^>=1.34.1.0
-    , plutus-tx ^>=1.34.1.0
-    , plutus-tx-plugin ^>=1.34.1.0
+    , plutus-core ^>=1.9
+    , plutus-ledger-api ^>=1.9
+    , plutus-tx ^>=1.9
+    , plutus-tx-plugin ^>=1.9
     , scripts
     , hex-text ^>=0.1.0.9
     , text ^>=2.0.2
@@ -66,10 +73,10 @@ executable gen-minting-policy-blueprint
     , base
     , bytestring
     , containers
-    , plutus-core ^>=1.34.1.0
-    , plutus-ledger-api ^>=1.34.1.0
-    , plutus-tx ^>=1.34.1.0
-    , plutus-tx-plugin ^>=1.34.1.0
+    , plutus-core ^>=1.9
+    , plutus-ledger-api ^>=1.9
+    , plutus-tx ^>=1.9
+    , plutus-tx-plugin ^>=1.9
     , scripts
     , hex-text ^>=0.1.0.9
     , text ^>=2.0.2
@@ -82,10 +89,10 @@ executable gen-top-hash
     , base
     , bytestring
     , containers
-    , plutus-core ^>=1.34.1.0
-    , plutus-ledger-api ^>=1.34.1.0
-    , plutus-tx ^>=1.34.1.0
-    , plutus-tx-plugin ^>=1.34.1.0
+    , plutus-core ^>=1.9
+    , plutus-ledger-api ^>=1.9
+    , plutus-tx ^>=1.9
+    , plutus-tx-plugin ^>=1.9
     , scripts
     , hex-text ^>=0.1.0.9
     , text ^>=2.0.2
