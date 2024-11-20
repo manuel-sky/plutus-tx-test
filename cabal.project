@@ -30,6 +30,3 @@ source-repository-package
   location: https://github.com/mlabs-haskell/freer-extras
   tag: c3b6a914bca706ad3c9d2ef829988ca3f7b813d3
   --sha256: sha256-L92pzIA3uIrG8oDFdWYqDZ8ftBHvK5rm22Ir5/KP3rk=
-  subdir:
-    freer-extras
-    
