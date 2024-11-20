@@ -10,11 +10,9 @@ repository cardano-haskell-packages
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
 index-state:
-  -- Bump both the following dates if you need newer packages from Hackage
-  , hackage.haskell.org 2024-09-19T00:00:00Z
-  -- Bump this if you need newer packages from CHaP
-  , cardano-haskell-packages 2024-09-19T00:00:00Z
-
+  , hackage.haskell.org 2024-06-12T10:10:17Z
+  , cardano-haskell-packages 2024-06-12T10:10:17Z
+  
 packages:
   ./.
 
@@ -26,3 +24,12 @@ source-repository-package
   subdir:
     quickcheck-contractmodel
     quickcheck-threatmodel
+
+source-repository-package
+  type: git
+  location: https://github.com/mlabs-haskell/freer-extras
+  tag: c3b6a914bca706ad3c9d2ef829988ca3f7b813d3
+  --sha256: sha256-L92pzIA3uIrG8oDFdWYqDZ8ftBHvK5rm22Ir5/KP3rk=
+  subdir:
+    freer-extras
+    
