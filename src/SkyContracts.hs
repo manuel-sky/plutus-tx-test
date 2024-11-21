@@ -65,6 +65,10 @@ instance Eq DataHash where
 instance PlutusTx.Eq DataHash where
     (DataHash dh1) == (DataHash dh2) = equalsByteString dh1 dh2
 
+-- Hashes the concatenation of a pair of hashes
+pairHash :: DataHash -> DataHash -> DataHash
+pairHash (DataHash a) (DataHash b) = DataHash (sha2_256 (a `appendByteString` b))
+
 -- A public key
 data PubKey = PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
@@ -81,9 +85,14 @@ data MultiSigPubKey = MultiSigPubKey [PubKey] Integer
   deriving anyclass (HasBlueprintDefinition)
 
 -- A single signature by a single data operator public key
-data SingleSig = SingleSig PlutusTx.BuiltinByteString
+data SingleSig = SingleSig PubKey PlutusTx.BuiltinByteString
   deriving stock (Generic)
   deriving anyclass (HasBlueprintDefinition)
+
+instance Eq SingleSig where
+  (SingleSig pubKey1 sig1) == (SingleSig pubKey2 sig2) = pubKey1 == pubKey2 && sig1 == sig2
+instance PlutusTx.Eq SingleSig where
+  (SingleSig pubKey1 sig1) == (SingleSig pubKey2 sig2) = pubKey1 == pubKey2 && sig1 == sig2
 
 -- Signatures produced by data operators for top hash, must be in same order as multi-sig pubkeys
 data MultiSig = MultiSig [SingleSig]
@@ -217,9 +226,9 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
               -- The NFT must be again included in the outputs
               outputHasNFT,
               -- The NFT's data must have been updated
-              nftUpdated newTopHash
+              nftUpdated newTopHash,
               -- The hash of pair(multisig-hash, old-data-hash) must be = old-top-hash
-              -- TBD
+              oldTopHashMatches committee oldDataHash 
             ]
 
     ownOutput :: TxOut
@@ -236,26 +245,48 @@ bridgeTypedValidator params () redeemer ctx@(ScriptContext txInfo _) =
     bridgeNFTDatum :: Maybe BridgeNFTDatum
     bridgeNFTDatum = getBridgeNFTDatumFromTxOut ownOutput ctx
 
+    oldTopHashMatches :: MultiSigPubKey -> DataHash -> Bool
+    oldTopHashMatches committee oldDataHash =
+      let (Just (BridgeNFTDatum oldTopHash)) = bridgeNFTDatum in
+        oldTopHash PlutusTx.== pairHash oldDataHash (multiSigToDataHash committee)
+
     -- The NFT UTXO's datum must match the new values for the root hashes
     nftUpdated :: DataHash -> Bool
     nftUpdated newTopHash =
       bridgeNFTDatum PlutusTx.== Just (BridgeNFTDatum newTopHash)
 
 -- Function that checks if a SingleSig is valid
-singleSigValid :: PubKey -> DataHash -> SingleSig -> Bool
-singleSigValid (PubKey pubKey) (DataHash topHash) (SingleSig sig) =
+singleSigValid :: DataHash -> SingleSig -> Bool
+singleSigValid (DataHash topHash) (SingleSig (PubKey pubKey) sig) =
   verifyEd25519Signature pubKey topHash sig
 
 -- Main function to check if the MultiSig satisfies at least N valid unique signatures
--- (Currently enforces that there's only one signature in the multisig for simplicity.)
 multiSigValid :: MultiSigPubKey -> DataHash -> MultiSig -> Bool
-multiSigValid (MultiSigPubKey [pubKey] _) topHash (MultiSig [singleSig]) =
-  singleSigValid pubKey topHash singleSig
+multiSigValid (MultiSigPubKey pubKeys minSigs) topHash (MultiSig singleSigs) =
+  let -- Extract the public keys from the SingleSig values
+      pubKeysInSignatures = PlutusTx.map (\(SingleSig pubKey _) -> pubKey) singleSigs
+      -- Check for duplicates by comparing the list to its nub version
+      noDuplicates = pubKeysInSignatures PlutusTx.== PlutusTx.nub pubKeysInSignatures
+  in if not noDuplicates
+     then False -- Duplicates found, return False
+     else let -- Filter for valid signatures from required public keys
+              validSignatures = PlutusTx.filter (\ss@(SingleSig pubKey sig) -> pubKey `PlutusTx.elem` pubKeys && singleSigValid topHash ss) singleSigs
+          in PlutusTx.length validSignatures PlutusTx.>= minSigs
 
 -- Create fingerprint of a multisig pubkey
 multiSigToDataHash :: MultiSigPubKey -> DataHash
-multiSigToDataHash (MultiSigPubKey [(PubKey pubKey)] _) =
-  DataHash (sha2_256 pubKey)
+multiSigToDataHash (MultiSigPubKey pubKeys _) = 
+    let -- Step 1: Concatenate the public keys manually
+        concatenated = concatPubKeys pubKeys
+        -- Step 2: Apply sha2_256 to the concatenated byte string
+        hashed = sha2_256 concatenated
+    in DataHash hashed
+
+-- Helper function to concatenate a list of PubKey byte strings
+concatPubKeys :: [PubKey] -> PlutusTx.BuiltinByteString
+concatPubKeys (PubKey pk : rest) = -- assume at least one pubkey
+    let restConcatenated = concatPubKeys rest
+    in appendByteString pk restConcatenated
 
 --- CLIENT CONTRACT
 
@@ -319,10 +350,6 @@ merkleProofValid ctx csym targetHash multiSigPubKeyHash proof =
   case getRefBridgeNFTDatumFromContext csym ctx of
     Nothing -> PlutusTx.traceError "bridge NFT not found"
     Just (BridgeNFTDatum topHash) -> merkleProofNFTHashValid topHash targetHash multiSigPubKeyHash proof
-
--- Hashes the concatenation of a pair of hashes
-pairHash :: DataHash -> DataHash -> DataHash
-pairHash (DataHash a) (DataHash b) = DataHash (sha2_256 (a `appendByteString` b))
 
 -- Hashes a merkle proof to produce the root data hash
 merkleProofToDataHash :: SimplifiedMerkleProof -> DataHash
