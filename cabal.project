@@ -27,6 +27,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/mlabs-haskell/freer-extras
-  tag: c3b6a914bca706ad3c9d2ef829988ca3f7b813d3
-  --sha256: sha256-L92pzIA3uIrG8oDFdWYqDZ8ftBHvK5rm22Ir5/KP3rk=
+  location: https://github.com/IntersectMBO/cardano-node-emulator
+  tag: ba5c4910a958bbccb38399f6a871459e46701a93
+  --sha256: sha256-vH4nKkzvRwgXfNEiL+9lIrZpVSk7yDBEgYkUFsJfGOI=
+  subdir:
+    freer-extras
+  
